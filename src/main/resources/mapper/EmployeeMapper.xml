@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.aind.hr.repository.EmployeeRepository">
+
+    <select id="selectAll" resultType="Employee">
+        SELECT id, name, email, phone, department_id, position, hire_date, status,
+               created_at, updated_at
+        FROM employee
+        ORDER BY id
+    </select>
+
+    <select id="selectById" parameterType="int" resultType="Employee">
+        SELECT id, name, email, phone, department_id, position, hire_date, status,
+               created_at, updated_at
+        FROM employee
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectWithDepartmentById" parameterType="int" resultType="com.aind.hr.model.response.EmployeeResponse">
+        SELECT e.id,
+               e.name,
+               e.email,
+               e.phone,
+               e.department_id,
+               d.name AS department_name,
+               e.position,
+               e.hire_date,
+               e.status,
+               e.created_at,
+               e.updated_at
+        FROM employee e
+        INNER JOIN department d ON e.department_id = d.id
+        WHERE e.id = #{id}
+    </select>
+
+    <select id="selectAllWithDepartment" resultType="com.aind.hr.model.response.EmployeeResponse">
+        SELECT e.id,
+               e.name,
+               e.email,
+               e.phone,
+               e.department_id,
+               d.name AS department_name,
+               e.position,
+               e.hire_date,
+               e.status,
+               e.created_at,
+               e.updated_at
+        FROM employee e
+        INNER JOIN department d ON e.department_id = d.id
+        ORDER BY e.id
+    </select>
+
+    <select id="selectByDepartmentId" parameterType="int" resultType="Employee">
+        SELECT id, name, email, phone, department_id, position, hire_date, status,
+               created_at, updated_at
+        FROM employee
+        WHERE department_id = #{departmentId}
+        ORDER BY id
+    </select>
+
+    <insert id="insert" parameterType="Employee" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO employee (name, email, phone, department_id, position, hire_date, status)
+        VALUES (#{name}, #{email}, #{phone}, #{departmentId}, #{position}, #{hireDate}, 'ACTIVE')
+    </insert>
+
+    <update id="update" parameterType="Employee">
+        UPDATE employee
+        SET name          = #{name},
+            email         = #{email},
+            phone         = #{phone},
+            department_id = #{departmentId},
+            position      = #{position},
+            status        = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="int">
+        DELETE FROM employee WHERE id = #{id}
+    </delete>
+
+</mapper>

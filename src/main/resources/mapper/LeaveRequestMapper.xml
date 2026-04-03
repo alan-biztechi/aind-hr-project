@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.aind.hr.repository.LeaveRequestRepository">
+
+    <!--
+        의도적 불일치: DB 컬럼은 created_at이지만 엔티티 필드는 requestDate.
+        map-underscore-to-camel-case로도 매핑되지 않으므로 requestDate는 항상 null입니다.
+        Copilot Lab 2에서 이 불일치를 발견하고 수정하는 실습에 사용합니다.
+    -->
+
+    <select id="selectAll" resultType="LeaveRequest">
+        SELECT id, employee_id, leave_type, start_date, end_date,
+               reason, status, approver_id, created_at, updated_at
+        FROM leave_request
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByEmployeeId" parameterType="int" resultType="LeaveRequest">
+        SELECT id, employee_id, leave_type, start_date, end_date,
+               reason, status, approver_id, created_at, updated_at
+        FROM leave_request
+        WHERE employee_id = #{employeeId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectById" parameterType="int" resultType="LeaveRequest">
+        SELECT id, employee_id, leave_type, start_date, end_date,
+               reason, status, approver_id, created_at, updated_at
+        FROM leave_request
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="LeaveRequest" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO leave_request (employee_id, leave_type, start_date, end_date, reason)
+        VALUES (#{employeeId}, #{leaveType}, #{startDate}, #{endDate}, #{reason})
+    </insert>
+
+</mapper>

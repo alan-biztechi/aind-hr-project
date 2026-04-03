@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.aind.hr.repository.DepartmentRepository">
+
+    <select id="selectAll" resultType="Department">
+        SELECT id, name, description, created_at, updated_at
+        FROM department
+        ORDER BY id
+    </select>
+
+    <select id="selectById" parameterType="int" resultType="Department">
+        SELECT id, name, description, created_at, updated_at
+        FROM department
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="Department" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO department (name, description)
+        VALUES (#{name}, #{description})
+    </insert>
+
+    <update id="update" parameterType="Department">
+        UPDATE department
+        SET name        = #{name},
+            description = #{description}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="int">
+        DELETE FROM department WHERE id = #{id}
+    </delete>
+
+</mapper>

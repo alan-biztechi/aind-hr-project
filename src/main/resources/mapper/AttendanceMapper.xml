@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.aind.hr.repository.AttendanceRepository">
+
+    <select id="selectAll" resultType="Attendance">
+        SELECT id, employee_id, work_date, check_in, check_out, status, note, created_at
+        FROM attendance
+        ORDER BY work_date DESC, employee_id
+    </select>
+
+    <select id="selectByEmployeeId" parameterType="int" resultType="Attendance">
+        SELECT id, employee_id, work_date, check_in, check_out, status, note, created_at
+        FROM attendance
+        WHERE employee_id = #{employeeId}
+        ORDER BY work_date DESC
+    </select>
+
+    <select id="selectByWorkDate" resultType="Attendance">
+        SELECT id, employee_id, work_date, check_in, check_out, status, note, created_at
+        FROM attendance
+        WHERE work_date = #{workDate}
+        ORDER BY employee_id
+    </select>
+
+    <select id="selectById" parameterType="int" resultType="Attendance">
+        SELECT id, employee_id, work_date, check_in, check_out, status, note, created_at
+        FROM attendance
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectAllWithEmployee" resultType="com.aind.hr.model.response.AttendanceResponse">
+        SELECT a.id,
+               a.employee_id,
+               e.name   AS employee_name,
+               d.name   AS department_name,
+               a.work_date,
+               a.check_in,
+               a.check_out,
+               a.status,
+               a.note,
+               a.created_at
+        FROM attendance a
+        INNER JOIN employee e ON a.employee_id = e.id
+        INNER JOIN department d ON e.department_id = d.id
+        ORDER BY a.work_date DESC, a.employee_id
+    </select>
+
+    <insert id="insert" parameterType="Attendance" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO attendance (employee_id, work_date, check_in, status, note)
+        VALUES (#{employeeId}, #{workDate}, #{checkIn}, #{status}, #{note})
+    </insert>
+
+    <update id="updateCheckOut">
+        UPDATE attendance
+        SET check_out = #{checkOut}
+        WHERE id = #{id}
+    </update>
+
+</mapper>
