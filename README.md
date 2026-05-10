@@ -1,6 +1,9 @@
 # AIND HR Project
 
-인사/근태 관리 실습 프로젝트입니다. Copilot 핸즈온 실습에서 사용합니다.
+인사/근태 관리 실습 프로젝트입니다. Copilot 및 Cursor 핸즈온 실습에서 사용합니다.
+
+> **W3A-8 Cursor CLI 데모를 찾으시면** → [`agentic-demo/README.md`](agentic-demo/README.md)
+> (백엔드는 이 README 의 절차로 먼저 띄워야 합니다.)
 
 ## 기술 스택
 

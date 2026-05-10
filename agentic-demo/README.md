@@ -37,6 +37,9 @@ INSTRUCTOR_MODE=1 node bin/agentic-pipeline.js     # 강사 (+ AWS S3 배포)
 ### Windows (PowerShell)
 
 ```powershell
+# (한 번만) PowerShell 스크립트 실행 허용
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+
 # 1) 백엔드 띄움 (다른 터미널)
 cd ..
 .\mvnw.cmd spring-boot:run
@@ -44,13 +47,57 @@ cd ..
 # 2) 이 폴더로 이동해서 Windows Terminal 자동 셋업
 cd agentic-demo
 pwsh .\bin\agentic-launch.ps1
+# pwsh 가 없으면: powershell .\bin\agentic-launch.ps1   (Win10 기본 PowerShell 5.1)
 
 # 3) controller 페인(맨 아래)에서
 node bin\agentic-pipeline.js                          # 학생
 $env:INSTRUCTOR_MODE='1'; node bin\agentic-pipeline.js  # 강사 (+ AWS S3 배포)
 ```
 
-자동 셋업이 안 되면 launcher가 *수동 가이드* 를 출력합니다 (Alt+Shift+- 로 페인 분할).
+#### 자동 셋업이 실패하면 — 수동 가이드
+
+```powershell
+# 1. Windows Terminal 새 창 열기 (wt)
+# 2. Alt + Shift + - 를 6번 눌러 7개 페인으로 분할 (수평 분할)
+# 3. 위에서부터 각 페인에 다음 명령 입력:
+Get-Content -Wait .logs\planner.log
+Get-Content -Wait .logs\scaffolder.log
+Get-Content -Wait .logs\api-integrator.log
+Get-Content -Wait .logs\ui-builder.log
+Get-Content -Wait .logs\verifier.log
+Get-Content -Wait .logs\release-engineer.log
+# 4. 마지막(컨트롤러) 페인:
+node bin\agentic-pipeline.js
+```
+
+### 리셋해서 다시 돌리기
+
+```powershell
+# Windows
+Remove-Item .logs\*.log, .logs\*.raw.log, .logs\*.stderr.log -Force -ErrorAction SilentlyContinue
+# 산출물 통째로 지우려면 (선택)
+Remove-Item -Recurse -Force web-dashboard, TASKS.md, RESULT.md -ErrorAction SilentlyContinue
+```
+
+```bash
+# macOS / Linux
+rm -f .logs/*.log .logs/*.raw.log .logs/*.stderr.log
+# 산출물 통째로 지우려면 (선택)
+rm -rf web-dashboard TASKS.md RESULT.md
+```
+
+### 자주 막히는 지점
+
+| 증상 | 해결 |
+|---|---|
+| `node` 인식 안 됨 | `winget install OpenJS.NodeJS.LTS` 후 새 PowerShell 창 |
+| `cursor-agent` 인식 안 됨 | Cursor 설치 → `Cursor` 메뉴에서 *"Install cursor-agent CLI"* |
+| `pwsh` 없음 | `powershell` 로 대체 (Win10 내장) — 동작은 동일 |
+| `wt` 없음 | Microsoft Store → *Windows Terminal* 설치 |
+| `.ps1 cannot be loaded` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| 백엔드 헬스체크 실패 | `Invoke-WebRequest http://localhost:8080/v3/api-docs` 로 직접 확인. 8080 포트 점유 시 종료 후 재시도 |
+| 페인은 떴지만 텍스트가 안 흐름 | `.logs\planner.raw.log` 의 첫 줄 확인 — JSON 형태가 안 나오면 cursor-agent 인증 문제 (`cursor-agent --help`로 우선 검증) |
+| TypeScript 빌드 에러로 verifier 가 멈춤 | verifier 페인 출력 + `web-dashboard\dist` 디렉터리 존재 여부 확인 |
 
 ## 폴더 구조
 
