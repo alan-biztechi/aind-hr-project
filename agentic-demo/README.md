@@ -11,19 +11,46 @@
 
 ## 어떻게 시작하나
 
+컨트롤러는 *Node 단일 스크립트* 라 macOS/Linux/Windows 어디서나 같은 코드가 돕니다. 페인 셋업(멀티플렉서)만 OS별:
+
+| OS | 페인 셋업 | 컨트롤러 |
+|---|---|---|
+| macOS / Linux | `zellij --layout .zellij/layouts/agentic-demo.kdl` | `node bin/agentic-pipeline.js` |
+| Windows | `pwsh .\bin\agentic-launch.ps1` (Windows Terminal 자동 분할) | `node bin\agentic-pipeline.js` |
+
+### macOS / Linux
+
 ```bash
-# 1) 백엔드부터 띄움 (다른 터미널)
-cd ..        # aind-hr-project 루트로
+# 1) 백엔드 띄움 (다른 터미널)
+cd ..
 ./mvnw spring-boot:run
 
 # 2) 이 폴더로 이동해서 zellij 진입
 cd agentic-demo
 zellij --layout .zellij/layouts/agentic-demo.kdl
 
-# 3) 활성화된 controller 페인에서 파이프라인 실행
-./bin/agentic-pipeline.sh                # 학생 모드 (5 에이전트)
-INSTRUCTOR_MODE=1 ./bin/agentic-pipeline.sh   # 강사 모드 (+ AWS S3 배포)
+# 3) controller 페인에서
+node bin/agentic-pipeline.js                       # 학생
+INSTRUCTOR_MODE=1 node bin/agentic-pipeline.js     # 강사 (+ AWS S3 배포)
 ```
+
+### Windows (PowerShell)
+
+```powershell
+# 1) 백엔드 띄움 (다른 터미널)
+cd ..
+.\mvnw.cmd spring-boot:run
+
+# 2) 이 폴더로 이동해서 Windows Terminal 자동 셋업
+cd agentic-demo
+pwsh .\bin\agentic-launch.ps1
+
+# 3) controller 페인(맨 아래)에서
+node bin\agentic-pipeline.js                          # 학생
+$env:INSTRUCTOR_MODE='1'; node bin\agentic-pipeline.js  # 강사 (+ AWS S3 배포)
+```
+
+자동 셋업이 안 되면 launcher가 *수동 가이드* 를 출력합니다 (Alt+Shift+- 로 페인 분할).
 
 ## 폴더 구조
 
@@ -40,32 +67,45 @@ agentic-demo/
 │   ├── verifier.md
 │   └── release-engineer.md
 │
-├── .zellij/layouts/agentic-demo.kdl ← 6+1 페인 레이아웃
-├── bin/agentic-pipeline.sh          ← bash 컨트롤러
+├── .zellij/layouts/agentic-demo.kdl ← macOS/Linux 페인 레이아웃 (zellij)
+├── bin/
+│   ├── agentic-pipeline.js          ← Node 단일 컨트롤러 (모든 OS 공통)
+│   └── agentic-launch.ps1           ← Windows Terminal 자동 분할 셋업
 │
 ├── (.logs/)                         ← gitignored, 페인 tail 대상
 ├── (TASKS.md, RESULT.md)            ← gitignored, 자동 생성
 └── (web-dashboard/)                 ← gitignored, scaffolder가 생성한 React 프로젝트
 ```
 
+## 사전 준비
+
+| 도구 | macOS/Linux | Windows |
+|---|---|---|
+| Node.js 18+ | brew/nvm | winget / 공식 인스톨러 (이미 깔려 있음 — MCP 실습 사전 준비) |
+| Cursor CLI (`cursor-agent`) | https://docs.cursor.com/cli | 동일 |
+| 멀티플렉서 | zellij (`brew install zellij`) | Windows Terminal (Microsoft Store, 보통 사전 설치) |
+| 백엔드 의존성 | (위 aind-hr-project README 참고) | 동일 |
+
 ## Cursor CLI의 한계와 우회
 
 현재 Cursor CLI(`cursor-agent`)는 `.cursor/agents/*.md` 의 *서브에이전트 자동 호출 기능이 없습니다* (Claude Code의 Task 도구와 다름). 그래서:
 
-- bash 스크립트가 각 `.md` 파일의 본문(역할 설명)을 *읽어서 프롬프트에 합쳐* `cursor-agent --print` 로 호출
+- Node 컨트롤러가 각 `.md` 파일의 본문(역할 설명)을 *읽어서 프롬프트에 합쳐* `cursor-agent --print` 로 호출
 - 각 호출은 *독립 세션* — 컨텍스트는 자동으로 격리
+- `--output-format stream-json --stream-partial-output` 으로 토큰 단위 스트리밍 → JSON.parse → 텍스트만 페인 로그에 흘림
 - frontmatter의 `tools: [...]` 권한 명시는 *문서 역할만* — 실제 권한 강제는 안 됨 (`--force` 로 모든 도구 허용)
 - 시각적 분리(페인별 로그)와 워크플로 형태는 그대로 유지
 
-향후 Cursor CLI가 서브에이전트를 지원하면 스크립트만 갈아끼우면 됩니다.
+향후 Cursor CLI가 서브에이전트를 지원하면 컨트롤러만 갈아끼우면 됩니다.
 
 ## API 학습 방식 — 백엔드 코드는 안 봅니다
 
 api-integrator 에이전트는 백엔드 Java 코드를 보지 않고, *실행 중인 백엔드의 OpenAPI 스펙과 실제 응답*을 curl로 조회해서 타입을 학습합니다:
 
 ```bash
+# macOS/Linux/Windows 동일
 curl -s http://localhost:8080/v3/api-docs
-curl -s http://localhost:8080/v1/employees | jq '.[0]'
+curl -s http://localhost:8080/v1/employees    # jq 는 선택, 없어도 됨
 ```
 
 폴더 결합 없이 백엔드 API 정확도를 유지하는 방식입니다.
