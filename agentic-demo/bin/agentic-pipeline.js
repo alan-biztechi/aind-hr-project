@@ -71,20 +71,40 @@ function runAgent(name, task) {
 
         const prompt = `${role}\n\n## 이번 작업\n${task}`;
 
-        // Windows 에선 cursor-agent 가 .cmd 셰임으로 깔리는 경우가 있어 shell:true 로 해소
         const isWin = process.platform === 'win32';
 
-        const child = spawn('cursor-agent', [
-            '--print',
-            '--force',
-            '--trust',
-            '--output-format', 'stream-json',
-            '--stream-partial-output',
-            prompt,
-        ], {
-            stdio: ['ignore', 'pipe', 'pipe'],
-            shell: isWin,    // Windows: cmd.exe 가 .cmd/.exe 확장자 자동 해소
-        });
+        // Windows: shell:true 로 spawn 하면 Node 가 cmd.exe /d /s /c "..." 로 감싸는데
+        // cmd.exe argv 파서가 multi-line 문자열·콤마·한글을 망가뜨려 프롬프트가 잘려서
+        // 도착함 (모델이 "메시지가 끊겼다"고 반응). 우회: 프롬프트를 파일에 쓰고
+        // PowerShell 헬퍼가 파일을 읽어 & 연산자로 cursor-agent 에 단일 argv 로 전달.
+        // shell:false 로 powershell.exe 를 직접 spawn → cmd.exe 가 경로에서 빠짐.
+        let cmd, args, spawnOpts;
+        if (isWin) {
+            const promptFile = path.resolve(LOG_DIR, `${name}.prompt.txt`);
+            fs.writeFileSync(promptFile, prompt, 'utf8');
+            cmd = 'powershell.exe';
+            args = [
+                '-NoProfile',
+                '-NonInteractive',
+                '-ExecutionPolicy', 'Bypass',
+                '-File', path.resolve('bin', '_cursor-call.ps1'),
+                '-PromptFile', promptFile,
+            ];
+            spawnOpts = { stdio: ['ignore', 'pipe', 'pipe'], shell: false };
+        } else {
+            cmd = 'cursor-agent';
+            args = [
+                '--print',
+                '--force',
+                '--trust',
+                '--output-format', 'stream-json',
+                '--stream-partial-output',
+                prompt,
+            ];
+            spawnOpts = { stdio: ['ignore', 'pipe', 'pipe'], shell: false };
+        }
+
+        const child = spawn(cmd, args, spawnOpts);
 
         // 원본 JSON 보존 (디버깅용)
         const rawLog    = fs.createWriteStream(path.join(LOG_DIR, `${name}.raw.log`), { flags: 'a' });
