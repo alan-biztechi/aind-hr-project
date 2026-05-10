@@ -1,0 +1,10 @@
+# W3A-8 CLI 데모 폴더를 IDE 인덱싱/자동 컨텍스트에서 제외.
+# 백엔드 IDE 실습(W3A-5/6) 중에 React/Vite 규칙이 끼어드는 것을 방지.
+#
+# 왜 .cursorignore 가 아닌 .cursorindexingignore 인가:
+# - .cursorignore        → 인덱싱 + AI 도구 접근 모두 차단.
+#                          cursor-agent CLI 가 agentic-demo/ 안에서 돌 때
+#                          Edit/Write 가 막혀 Bash 우회로만 작업 → 데모 느려짐.
+# - .cursorindexingignore → 인덱싱만 차단. AI 도구 접근은 허용.
+#                          IDE 격리 + CLI 자유 편집 모두 달성.
+agentic-demo/

@@ -4,8 +4,10 @@
 
 ## 이 폴더는 IDE에서 보이지 않습니다
 
-루트의 `.cursorignore`, `.copilotignore`, `.vscode/settings.json`이 이 폴더를 가립니다.
+루트의 `.cursorindexingignore`, `.copilotignore`, `.vscode/settings.json`이 이 폴더를 가립니다.
 백엔드 IDE 실습(Cursor IDE: W3A-5/6, Copilot Autopilot: W3B)을 진행할 때 React/Vite 규칙이 끼어드는 것을 방지하기 위함입니다.
+
+`.cursorignore` 가 아닌 `.cursorindexingignore` 를 쓰는 이유 — 전자는 cursor-agent CLI 의 직접 파일 편집(Edit/Write)까지 막아 데모가 Bash 우회로만 진행되어 느려집니다. 후자는 *IDE 인덱싱만 차단* 해서 IDE 격리와 CLI 자유 편집을 동시에 달성합니다.
 
 ## 어떻게 시작하나
 
@@ -30,8 +32,6 @@ agentic-demo/
 ├── README.md                       ← 이 파일
 ├── AGENTS.md                       ← 모든 서브에이전트의 공통 규칙
 ├── PLAN.md                         ← 만들 화면 정의
-├── .cursorignore                    ← (빈) 워크스페이스 anchor
-│
 ├── .cursor/agents/                  ← 6개 서브에이전트 정의
 │   ├── planner.md
 │   ├── scaffolder.md
