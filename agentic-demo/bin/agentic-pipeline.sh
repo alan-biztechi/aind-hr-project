@@ -52,15 +52,36 @@ run_agent() {
     {
         echo ""
         echo "[$(ts)] ▶ $name 시작"
+        echo ""
     } >> ".logs/${name}.log"
 
-    cursor-agent --print --force --trust "$role
+    # stream-json + awk(fflush 강제 + raw 보존) + jq(텍스트 추출) → 페인 로그
+    # tee 대신 awk를 쓰는 이유: tee는 stdout이 파이프일 때 block-buffer해서
+    # jq가 입력을 한참 기다리다 한꺼번에 처리 → 실시간 스트리밍 깨짐.
+    # awk의 fflush()로 라인 단위 즉시 flush.
+    cursor-agent --print --force --trust \
+        --output-format stream-json \
+        --stream-partial-output \
+        "$role
 
 ## 이번 작업
-$task" 2>&1 \
-        | tee -a ".logs/${name}.log" > /dev/null
+$task" 2> ".logs/${name}.stderr.log" \
+        | awk -v raw=".logs/${name}.raw.log" \
+              '{ print >> raw; print; fflush(); fflush(raw) }' \
+        | jq -j --unbuffered '
+            select(.type == "assistant" and (.timestamp_ms // false))
+            | .message.content[]?
+            | if .type == "text" then .text
+              elif .type == "tool_use" then "\n[🔧 \(.name)]\n"
+              else empty
+              end
+          ' \
+        >> ".logs/${name}.log"
 
-    echo "[$(ts)] ✅ $name 완료" >> ".logs/${name}.log"
+    {
+        echo ""
+        echo "[$(ts)] ✅ $name 완료"
+    } >> ".logs/${name}.log"
     say "✅ $name 완료"
 }
 
