@@ -24,3 +24,14 @@ target/
 
 ### Mac ###
 .DS_Store
+
+### Agentic demo (W3A-8 hands-on) ###
+/AGENTS.md
+/PLAN.md
+/TASKS.md
+/RESULT.md
+/.cursor/agents/
+/.zellij/
+/bin/agentic-pipeline.sh
+/.logs/
+/web-dashboard/
