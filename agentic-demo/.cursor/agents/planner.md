@@ -8,8 +8,9 @@ TASKS.md를 생성합니다. TASKS.md에는 다음을 포함합니다:
 
 1. 생성할 파일 목록 (web-dashboard/ 내부 경로)
 2. 파일별 책임 한 줄 요약
-3. 구현 순서 (의존성 고려)
-4. 어떤 단계가 병렬 가능한지 표시 (특히 ui-builder ‖ api-integrator)
+3. 구현 순서 — 다음을 따른다:
+   scaffolder → api-integrator → ui-builder → verifier
+   (api-integrator 가 만든 types/api 함수를 ui-builder 가 import 하므로 *반드시 순차*)
 
 코드는 작성하지 않습니다. 계획만 만듭니다.
 TASKS.md는 이 폴더(agentic-demo/) 루트에 생성합니다.

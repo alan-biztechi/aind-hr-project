@@ -34,10 +34,10 @@ tools: [Read, Write, Edit, Bash]
 
 5. `web-dashboard/src/api/departments.ts`: getDepartments()도 같은 패턴
 
-6. ui-builder가 만든 컴포넌트의 useEffect에서 위 함수들을 호출하도록 연결.
-   (ui-builder가 먼저 끝나지 않았으면, 컴포넌트는 손대지 말고 이 단계는 건너뛴다)
+여기서 *작업 종료*. 컴포넌트(`src/components/*.tsx`, `App.tsx`)는 *손대지 않습니다* — useEffect 연결과 컴포넌트 작성은 ui-builder의 책임이며, 다음 단계에서 이 파일들을 import 해서 자기 컴포넌트에 연결합니다.
 
 ## 금지 사항
 - `../src/main/...` 같은 백엔드 Java/리소스 파일 Read 금지 (강제 인프라 없음, 지침으로 통제)
 - 추측으로 타입 작성 금지 — 반드시 curl 결과 근거
 - 의존성 변경 금지 — fetch만 사용 (axios 설치 X)
+- 컴포넌트 파일(`src/components/*`, `App.tsx`) 작성/수정 금지 — ui-builder 책임
