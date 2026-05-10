@@ -18,9 +18,30 @@ tools: [Bash, Write, Edit]
 
 4. recharts 설치: `npm install recharts`
 
-5. `web-dashboard/.env.local`에 `VITE_API_BASE_URL=http://localhost:8080` 추가
+5. `web-dashboard/.env.local`에 `VITE_API_BASE_URL=/api` 추가
+   (절대 URL 아님 — CORS 회피 위해 Vite 프록시를 거침. AGENTS.md "CORS 처리 규약" 참고)
 
-6. 빈 src/components/, src/api/ 폴더 생성
+6. `web-dashboard/vite.config.ts` 에 *server.proxy* 설정 추가 — `/api` 접두사를 떼서 백엔드로 프록시:
+   ```ts
+   import { defineConfig } from 'vite'
+   import react from '@vitejs/plugin-react'
+
+   export default defineConfig({
+     plugins: [react()],
+     server: {
+       proxy: {
+         '/api': {
+           target: 'http://localhost:8080',
+           changeOrigin: true,
+           rewrite: (path) => path.replace(/^\/api/, ''),
+         },
+       },
+     },
+   })
+   ```
+   이걸 처음부터 깔아두면 ui-builder/api-integrator 가 CORS 시행착오를 안 겪음.
+
+7. 빈 src/components/, src/api/ 폴더 생성
 
 UI 컴포넌트나 API 호출 코드는 작성하지 않습니다. 환경만 만듭니다.
 모든 명령은 web-dashboard/ 안에서 실행되도록 cd를 명시하세요.

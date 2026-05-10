@@ -27,10 +27,14 @@ tools: [Read, Write, Edit, Bash]
 
 4. `web-dashboard/src/api/employees.ts`:
    ```ts
-   export async function getEmployees(): Promise<Employee[]> { ... }
+   const BASE = import.meta.env.VITE_API_BASE_URL  // = "/api" (Vite 프록시)
+   export async function getEmployees(): Promise<Employee[]> {
+     const res = await fetch(`${BASE}/v1/employees`)
+     if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
+     return res.json()
+   }
    ```
-   - `import.meta.env.VITE_API_BASE_URL` 사용
-   - fetch, JSON parse, 에러 시 throw
+   *반드시 `${BASE}/v1/...` 형태* 로 작성. *절대 `http://localhost:8080` 직접 박지 말 것* — 브라우저에서 CORS로 차단됨. AGENTS.md "CORS 처리 규약" 이 이미 Vite 프록시를 깔아둔 상태.
 
 5. `web-dashboard/src/api/departments.ts`: getDepartments()도 같은 패턴
 
