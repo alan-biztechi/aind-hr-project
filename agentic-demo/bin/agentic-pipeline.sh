@@ -23,14 +23,43 @@ fi
 say "✅ 백엔드 OK"
 
 # ── 한 에이전트를 자기 로그 파일로 라우팅하면서 실행 ────────────
+#
+# Cursor CLI는 `--agent` 플래그가 없어 .cursor/agents/*.md 를 자동 인식하지 못함.
+# (Claude Code의 subagent 메커니즘과는 다름.) 그래서 bash가 직접:
+#   1) .cursor/agents/<name>.md 의 frontmatter 이후 본문(역할/지침)을 읽음
+#   2) 그 본문 + 이번 작업(task) 을 합쳐서 프롬프트로 전달
+#   3) 각 호출은 독립 세션이라 컨텍스트는 자연스럽게 격리됨
+#
+# 옵션:
+#   --print   비대화형 헤드리스 (출력만)
+#   --force   모든 도구 호출 자동 승인 (Bash, Write 등 — 데모 목적)
+#   --trust   워크스페이스 자동 신뢰
 run_agent() {
     local name=$1
-    local prompt=$2
+    local task=$2
+    local agent_md=".cursor/agents/${name}.md"
+
+    if [[ ! -f "$agent_md" ]]; then
+        say "❌ $agent_md 파일이 없습니다"
+        return 1
+    fi
+
+    # YAML frontmatter (--- ... ---) 이후의 본문만 추출
+    local role
+    role=$(awk '/^---$/{n++; next} n>=2{print}' "$agent_md")
+
     say "▶ $name 시작"
-    echo "" >> ".logs/${name}.log"
-    echo "[$(ts)] ▶ $name 시작" >> ".logs/${name}.log"
-    cursor-agent --agent "$name" --prompt "$prompt" 2>&1 \
+    {
+        echo ""
+        echo "[$(ts)] ▶ $name 시작"
+    } >> ".logs/${name}.log"
+
+    cursor-agent --print --force --trust "$role
+
+## 이번 작업
+$task" 2>&1 \
         | tee -a ".logs/${name}.log" > /dev/null
+
     echo "[$(ts)] ✅ $name 완료" >> ".logs/${name}.log"
     say "✅ $name 완료"
 }
