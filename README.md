@@ -39,8 +39,16 @@ spring:
 
 ### 3. 빌드 및 실행
 
+Windows (cmd / PowerShell):
+
 ```bash
 .\mvnw.cmd spring-boot:run
+```
+
+macOS / Linux:
+
+```bash
+./mvnw spring-boot:run
 ```
 
 ### 4. API 문서 확인
