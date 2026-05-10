@@ -1,0 +1,3 @@
+# W3A-8 CLI 데모 폴더는 IDE 인덱싱/컨텍스트에서 제외.
+# 백엔드 IDE 실습(W3A-5/6) 중에 React/Vite 규칙이 끼어드는 것을 방지.
+agentic-demo/

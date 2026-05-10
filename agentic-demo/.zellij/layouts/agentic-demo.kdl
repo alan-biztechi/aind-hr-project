@@ -1,0 +1,48 @@
+// W3A-8 Cursor CLI 데모 — 6 에이전트 페인 + 1 컨트롤러 페인
+// 각 에이전트 페인은 .logs/<agent>.log 를 tail. 컨트롤러가 bin/agentic-pipeline.sh 실행.
+
+layout {
+    default_tab_template {
+        pane size=1 borderless=true { plugin location="zellij:tab-bar"; }
+        children
+        pane size=2 borderless=true { plugin location="zellij:status-bar"; }
+    }
+
+    tab name="agentic" focus=true {
+        // 상단 행 — planner / scaffolder / verifier (순차 호출되는 3개)
+        pane size="40%" split_direction="vertical" {
+            pane name="planner" {
+                command "bash"
+                args "-c" "mkdir -p .logs && touch .logs/planner.log && tail -f .logs/planner.log"
+            }
+            pane name="scaffolder" {
+                command "bash"
+                args "-c" "mkdir -p .logs && touch .logs/scaffolder.log && tail -f .logs/scaffolder.log"
+            }
+            pane name="verifier" {
+                command "bash"
+                args "-c" "mkdir -p .logs && touch .logs/verifier.log && tail -f .logs/verifier.log"
+            }
+        }
+        // 중단 행 — ui-builder / api-integrator / release-engineer
+        // (ui ‖ api 는 병렬, release는 강사 모드에서만)
+        pane size="40%" split_direction="vertical" {
+            pane name="ui-builder" {
+                command "bash"
+                args "-c" "mkdir -p .logs && touch .logs/ui-builder.log && tail -f .logs/ui-builder.log"
+            }
+            pane name="api-integrator" {
+                command "bash"
+                args "-c" "mkdir -p .logs && touch .logs/api-integrator.log && tail -f .logs/api-integrator.log"
+            }
+            pane name="release-engineer" {
+                command "bash"
+                args "-c" "mkdir -p .logs && touch .logs/release-engineer.log && tail -f .logs/release-engineer.log"
+            }
+        }
+        // 하단 — 컨트롤러 (포커스 시작 위치, 여기에 ./bin/agentic-pipeline.sh 입력)
+        pane size="20%" name="controller" focus=true {
+            command "bash"
+        }
+    }
+}

@@ -1,0 +1,5 @@
+# W3A-8 CLI 데모 폴더는 Copilot 컨텍스트/제안에서 제외.
+# 백엔드 Copilot 오토파일럿 실습(W3B) 중에 React/Vite 컨텍스트 오염 방지.
+# 신규 Copilot Agent 모드가 인식. 일부 구버전은 무시할 수 있어 .vscode/settings.json 보조 사용.
+agentic-demo/
+agentic-demo/**

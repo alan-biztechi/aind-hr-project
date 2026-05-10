@@ -1,0 +1,3 @@
+# 빈 파일 — cursor-agent CLI가 이 폴더를 자기 워크스페이스 루트로 인식하도록 anchor.
+# 부모 디렉터리(aind-hr-project/)의 .cursorignore가 'agentic-demo/'를 제외해두었으므로
+# 부모 .cursorignore가 거슬러 올라가서 적용되는 것을 막기 위한 파일.

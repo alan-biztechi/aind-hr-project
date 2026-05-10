@@ -20,18 +20,15 @@ target/
 *.ipr
 
 ### VS Code ###
-.vscode/
+.vscode/*
+!.vscode/settings.json
 
 ### Mac ###
 .DS_Store
 
 ### Agentic demo (W3A-8 hands-on) ###
-/AGENTS.md
-/PLAN.md
-/TASKS.md
-/RESULT.md
-/.cursor/agents/
-/.zellij/
-/bin/agentic-pipeline.sh
-/.logs/
-/web-dashboard/
+# 정의 파일은 커밋 (clone 즉시 실행 가능). 자동 생성물만 제외.
+/agentic-demo/.logs/
+/agentic-demo/TASKS.md
+/agentic-demo/RESULT.md
+/agentic-demo/web-dashboard/

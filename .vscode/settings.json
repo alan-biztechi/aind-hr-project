@@ -1,0 +1,13 @@
+{
+    "java.compile.nullAnalysis.mode": "automatic",
+
+    "files.exclude": {
+        "agentic-demo": true
+    },
+    "search.exclude": {
+        "agentic-demo": true
+    },
+    "files.watcherExclude": {
+        "agentic-demo/**": true
+    }
+}
