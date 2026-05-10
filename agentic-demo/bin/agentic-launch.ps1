@@ -68,18 +68,30 @@ function ControllerPaneArgs() {
 # ---- Build wt argument array -------------------------------------
 # Each element becomes a separate argv token.
 # A bare ';' element is recognized by wt as the sub-command separator.
+#
+# split-pane -H splits the *active* (= most-recently-created) pane in half by
+# default, which gives 50% / 25% / 12.5% / ... — uneven. Pass --size so each
+# split shrinks the parent down to its final share, leaving 7 equal panes.
+#
+# After N splits there are N+1 panes total. To make every pane = 1/7,
+# split #k (k = 1..6) must give the new pane (7-k)/(8-k) of its parent:
+#   1: 6/7 = 0.857   2: 5/6 = 0.833   3: 4/5 = 0.80
+#   4: 3/4 = 0.75    5: 2/3 = 0.667   6: 1/2 = 0.50
+$sizes = @('0.857','0.833','0.80','0.75','0.667','0.50')
+
 $wtArgs = @()
 
-# First pane - planner (new-tab)
+# First pane - planner (new-tab, no split needed)
 $wtArgs += @('new-tab', '-d', $dir, '--title', 'planner') + (TailPaneArgs 'planner')
 
-# Remaining 5 agents - split-pane -H (stack downward)
-foreach ($n in $names[1..5]) {
-    $wtArgs += @(';', 'split-pane', '-H', '-d', $dir, '--title', $n) + (TailPaneArgs $n)
+# Remaining 5 agents - split-pane -H with decreasing --size
+for ($i = 0; $i -lt 5; $i++) {
+    $n = $names[$i + 1]
+    $wtArgs += @(';', 'split-pane', '-H', '--size', $sizes[$i], '-d', $dir, '--title', $n) + (TailPaneArgs $n)
 }
 
-# Last - controller
-$wtArgs += @(';', 'split-pane', '-H', '-d', $dir, '--title', 'controller') + (ControllerPaneArgs)
+# Last - controller (6th split → final 1/2 → equal share)
+$wtArgs += @(';', 'split-pane', '-H', '--size', $sizes[5], '-d', $dir, '--title', 'controller') + (ControllerPaneArgs)
 
 # ---- Run ---------------------------------------------------------
 try {
