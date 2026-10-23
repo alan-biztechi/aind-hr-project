@@ -1,0 +1,31 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 2rem;
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  border-radius: 8px;
+  color: var(--color-danger-text);
+}
+
+.message {
+  margin: 0;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.retry {
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--color-danger-border);
+  background: #fff;
+  color: var(--color-danger-text);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.retry:hover {
+  background: var(--color-danger-bg);
+}
