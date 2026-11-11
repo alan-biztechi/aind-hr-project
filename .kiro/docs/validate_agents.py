@@ -6,11 +6,11 @@
 - 허용 필드 / 필수 필드
 - name == 파일명
 - V3 스키마 준수: permissions.rules 구조, tools 태그, 정규식(.*) 미사용
-- 오케스트레이터의 subagent 참조가 실제 존재하는 에이전트인지
-- 오케스트레이터가 subagent 도구를 가지는지
+- 오케스트레이터가 tools 의 'subagent/<이름>' 과 permissions 의 subagent 규칙으로 참조하는 에이전트가 실제 존재하는지
+- 오케스트레이터가 서브에이전트를 띄울 수 있는 tools 항목을 가지는지 (CLI V3 는 toolsSettings 를 무시함)
 
 사용법:
-    python3 .kiro/agents/validate_agents.py
+    python3 .kiro/docs/validate_agents.py
 """
 import glob
 import json
@@ -86,15 +86,27 @@ def main() -> int:
             if t in SUBAGENT_BLOCKED:
                 warnings.append(f"{name}: 도구 '{t}' 는 서브에이전트로 실행 시 동작 안 함")
 
-    # 오케스트레이터 참조 검증
+    # 오케스트레이터 검증 (CLI V3: 제한은 tools 의 subagent/<이름>, 무승인 시작은 permissions 의 subagent 규칙)
     orch = agents.get("sa-orchestrator", {})
-    sub = orch.get("toolsSettings", {}).get("subagent", {})
-    referenced = set(sub.get("availableAgents", [])) | set(sub.get("trustedAgents", []))
-    for r in referenced:
-        if r != "default" and "*" not in r and r not in agents:
+    tools = orch.get("tools", [])
+    spawnable = {t.split("/", 1)[1] for t in tools if t.startswith("subagent/")}
+    trusted = set()
+    for rule in orch.get("permissions", {}).get("rules", []):
+        if rule.get("capability") == "subagent":
+            trusted |= set(rule.get("match", []))
+
+    if "toolsSettings" in orch:
+        warnings.append("sa-orchestrator: 'toolsSettings'는 CLI V3에서 무시됨 (tools 의 subagent/<이름> + permissions 의 subagent 규칙으로 이전)")
+    for r in sorted(spawnable | trusted):
+        if r not in agents:
             problems.append(f"sa-orchestrator: 존재하지 않는 에이전트 '{r}' 참조")
-    if "subagent" not in orch.get("tools", []):
-        problems.append("sa-orchestrator: tools 에 'subagent' 없음 (서브에이전트 스폰 불가)")
+    if "subagent" not in tools and not spawnable:
+        problems.append("sa-orchestrator: tools 에 'subagent' 또는 'subagent/<이름>' 없음 (서브에이전트 스폰 불가)")
+    if spawnable and ({"subagent", "@builtin", "*"} & set(tools)):
+        warnings.append("sa-orchestrator: tools 에 'subagent'/'@builtin'/'*' 가 함께 있어 subagent/<이름> 제한이 무력화됨")
+    missing_trust = sorted(spawnable - trusted)
+    if missing_trust:
+        warnings.append(f"sa-orchestrator: permissions 의 subagent 규칙에 없는 에이전트 {missing_trust} -> 시작할 때 승인 프롬프트가 뜰 수 있음")
 
     print("=== 로드된 에이전트 ===")
     for n in agents:

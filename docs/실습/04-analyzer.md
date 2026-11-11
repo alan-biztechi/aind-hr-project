@@ -1,0 +1,147 @@
+# 실습 ④. Analyzer — 변경 영향도 분석
+
+> **과정**: 실무 활용
+> **소요 시간**: 약 30분
+> **난이도**: ★★★☆☆
+> **실습 목표**: `Employee`/`EmployeeResponse`에 **필드를 하나 추가**할 때, 백엔드(엔티티 → 매퍼 → 서비스 → 컨트롤러)와 프론트엔드(타입 → API → 화면)에 번지는 영향을 **바꾸기 전에** 추적한다.
+
+---
+
+## 0. 이 실습에서 배우는 것
+
+- "먼저 분석, 나중에 변경" — 회귀 사고를 예방하는 습관
+- 한 DTO 변경이 **FE·BE 전 레이어로 번지는 경로**를 끝까지 추적하는 법
+- Kiro에게 영향 범위를 **파일:라인 근거와 함께** 뽑게 하는 법
+
+> 💡 **왜 영향도 분석인가**: DTO(데이터 전송 객체) 하나를 바꾸면 매퍼 컬럼, 응답 직렬화, 프론트 타입, 화면 렌더링까지 조용히 깨질 수 있습니다. 바꾸기 전에 "어디까지 번지는지"를 알면, 수정 범위와 위험을 미리 통제할 수 있습니다.
+
+---
+
+## 1. 시나리오 — 직원에 `note`(비고) 필드 추가
+
+직원 엔티티에 자유 메모 `note`(비고)를 추가한다고 가정합니다. (DB 컬럼 `employee.note VARCHAR` 추가 전제)
+
+이 변경이 번질 **실제 지점**을 Kiro로 추적한 뒤, 매트릭스로 정리합니다.
+
+---
+
+## 2. 현재 구조 파악 (출발점)
+
+먼저 `Employee`와 `EmployeeResponse`의 실제 필드를 봅니다.
+
+**`Employee` (엔티티)** — `model/entity/Employee.java`
+`id, name, email, phone, departmentId, position, hireDate, status, createdAt, updatedAt`
+
+**`EmployeeResponse` (응답 DTO)** — `model/response/EmployeeResponse.java`
+위 필드 + `departmentName` (부서 조인 결과)
+
+> 💡 조회 목록/상세는 **`EmployeeResponse`**(부서명 포함)를 쓰고, 부서별 조회는 **`Employee`** 엔티티를 그대로 반환합니다(`EmployeeController.getEmployeesByDepartment`). 즉 `Employee`를 바꾸면 **일부 응답에도 직접 영향**이 갑니다.
+
+---
+
+## 3. 영향도 분석 (Kiro 활용)
+
+Kiro 채팅에 입력:
+
+```text
+Employee 엔티티와 EmployeeResponse에 'note'(String, 비고) 필드를 추가하려고 해.
+employee 테이블과 Employee* 클래스 기준으로만 봐줘. (attendance의 note는 별개 필드야)
+실제로 변경해야 하는 파일을 백엔드/프론트엔드로 나눠서 전부 찾아줘.
+각 지점을 파일:라인 근거와 함께, "무엇을 왜 바꿔야 하는지"까지 설명해줘.
+아직 코드는 바꾸지 말고 영향 목록만 만들어줘.
+```
+
+Kiro 답변을 아래 실제 지점과 대조하세요. (이 프로젝트에서 `note`가 번지는 경로)
+
+**백엔드 — `note`를 끝까지 흐르게 하려면:**
+
+| 지점 | 파일 | 할 일 |
+|------|------|-------|
+| DB 스키마(로컬 실습용) | `src/main/resources/schema.sql`의 `employee` 테이블 | `note` 컬럼 추가. 아래 ⚠️ 참고 |
+| 엔티티 | `model/entity/Employee.java` | `private String note;` 추가 |
+| 응답 DTO | `model/response/EmployeeResponse.java` | `private String note;` 추가 |
+| 매퍼 — 목록/상세 조회 | `mapper/EmployeeMapper.xml`의 `selectAllWithDepartment`, `selectWithDepartmentById` | SELECT 절에 `e.note` 추가 |
+| 매퍼 — 엔티티 조회 | `mapper/EmployeeMapper.xml`의 `selectAll`, `selectById`, `selectByDepartmentId` | SELECT 절에 `note` 추가 |
+| 매퍼 — 저장 | `mapper/EmployeeMapper.xml`의 `insert`, `update` | 저장 대상이면 INSERT/UPDATE 컬럼에 `note` 추가 |
+| (요청 입력이면) 요청 DTO | `model/request/EmployeeCreateRequest/UpdateRequest.java` + `EmployeeController`의 매핑 | 입력받을 거면 필드·setter 매핑 추가 |
+
+> ⚠️ **`update`에만 `note`를 넣으면 수정할 때마다 `note`가 지워진다**: `EmployeeMapper.xml`의 `update`는 `SET name = #{name}, … status = #{status}`처럼 **모든 컬럼을 덮어씁니다.** 여기에 `note = #{note}`만 추가하고 `EmployeeUpdateRequest`와 `EmployeeController.updateEmployee`의 필드 매핑을 빠뜨리면, `note`가 항상 `null`로 들어가 **기존 값이 사라집니다.** 프론트 폼이 `note`를 보내지 않을 때도 마찬가지입니다. 그래서 "저장 쿼리 ↔ 요청 DTO ↔ 컨트롤러 매핑 ↔ 프론트 폼"은 **한 묶음**으로 분석해야 합니다.
+
+> ⚠️ **`schema.sql`을 다시 실행하면 데이터가 초기화된다**: `schema.sql`은 맨 앞에서 `DROP TABLE IF EXISTS`로 테이블을 지우고 다시 만듭니다. 컬럼을 추가하려고 이 파일을 재실행하면 **로컬 DB의 기존 데이터가 사라집니다.** 이 실습은 영향 분석이 목적이므로 실행하지 말고, 적용한다면 로컬 DB에서만 하세요.
+
+> ⚠️ **`map-underscore-to-camel-case: true`**(application.yml)라서 DB `note` ↔ 자바 `note`는 자동 매핑되지만, **SELECT 절에 컬럼을 명시하지 않으면** 값이 안 채워집니다. 이 프로젝트 매퍼는 `SELECT *`가 아니라 **컬럼을 일일이 나열**하므로 반드시 추가해야 합니다.
+
+**프론트엔드 — 응답에 `note`가 추가되면:**
+
+| 지점 | 파일 | 할 일 |
+|------|------|-------|
+| 타입 | `frontend/src/types/api.ts`의 `EmployeeResponse` | `note: string \| null;` 추가 |
+| (입력 폼이면) 요청 타입 | 같은 파일의 `EmployeeCreateRequest` | 입력 받으면 `note?: string` 추가. `EmployeeUpdateRequest`는 `EmployeeCreateRequest`를 `extends`하므로 **함께 반영됨** |
+| 화면/폼 | `frontend/src/components/forms/EmployeeForm.tsx`, `frontend/src/pages/EmployeesPage.tsx` | 표시·입력 UI 추가(선택) |
+
+> 💡 **계약이 어긋난 곳도 같이 보인다**: 프론트 `api/employees.ts`의 `getEmployeesByDepartment`는 `EmployeeResponse[]`로 타입을 선언하지만, 백엔드 `GET /v1/employees/department/{departmentId}`는 **`Employee`(부서명 없음)를 반환**합니다. 이 함수는 `hooks/useEmployees.ts`에서 부서 필터 시 사용됩니다. `Employee`에 `note`를 추가하면 이 응답에도 `note`가 나가는 반면, `departmentName`은 이미 오지 않습니다. 영향도 분석을 하면 이런 **기존 계약 불일치**도 함께 드러납니다.
+
+> 💡 **함께 보기 — `departmentName`은 어디서 오나**: `EmployeeResponse.departmentName`은 엔티티 필드가 아니라 **매퍼의 `JOIN` 별칭**(`d.name AS department_name`)에서 채워집니다. 비슷한 구조인 `AttendanceResponse`(출퇴근 응답 DTO)도 `departmentName` 필드가 있지만, `AttendanceService.getAttendanceByDate`는 이 DTO를 **루프에서 한 건씩 직접 조립**하면서 `departmentName`을 채우지 않습니다(직원명만 개별 조회). 응답 DTO를 바꿀 때는 "조인 쿼리가 채우는 경로"와 "서비스가 수동으로 채우는 경로"를 **둘 다** 확인해야 누락이 없습니다. (이 N+1 문제 자체는 [실습 ⑤](./05-reviewer.md)에서 다룹니다.)
+
+> ⚠️ **동음이의 필드 — `note`는 이미 출퇴근에 있다**: 이 프로젝트에는 `attendance.note`가 이미 있어서 `Attendance`, `AttendanceResponse`, `AttendanceMapper.xml`, `schema.sql`, 프론트 `types/api.ts`의 출퇴근 타입에 `note`가 등장합니다. 이름만으로 검색하면 **직원과 무관한 결과가 섞입니다.** Kiro의 답에서 `Attendance*` 관련 항목이 나오면 "직원의 `note`와 다른 필드"로 걸러내세요. 프롬프트에 "`employee` 테이블/`Employee*` 클래스 기준으로만"이라고 범위를 적어 주면 결과가 깔끔해집니다.
+
+> 💡 **실무 팁 — "추가"는 비교적 안전, "이름 변경/삭제"가 위험**: 필드 추가는 보통 하위 호환됩니다. 반대로 `phone` → `mobilePhone` 같은 **이름 변경**이나 **필드 삭제**는 매퍼 별칭·프론트 타입·화면이 동시에 깨지므로, 영향도 분석이 특히 중요합니다.
+
+---
+
+## 4. 영향 매트릭스 정리
+
+Kiro에게 표로 정리시키거나, 아래 형식으로 직접 채웁니다.
+
+| 변경 | BE 영향 | FE 영향 | 위험 | 조치 |
+|------|---------|---------|------|------|
+| `Employee`/`EmployeeResponse`에 `note` 추가 | 클래스 2곳(`Employee`, `EmployeeResponse`), `EmployeeMapper.xml` SELECT 5곳(+저장 시 insert/update), 로컬 `schema.sql` | `types/api.ts`, (표시 시) 직원 화면/폼 | 낮음(추가) — 단 SELECT 누락 시 값 null, `update`만 수정하면 수정 시 `note` 유실 | 모든 조회 쿼리 SELECT에 컬럼 추가, 저장은 쿼리·요청 DTO·컨트롤러·폼을 한 묶음으로 변경, 타입에 `note` 반영 |
+
+---
+
+## 5. 변경 적용 (선택)
+
+분석이 끝나면 **그때** 실제 변경을 진행합니다. 또는 "지금은 변경하지 않음"을 결정하고 근거를 남깁니다.
+
+실제로 적용한다면, 변경 후 검증:
+
+```bash
+# 백엔드 컴파일 + 기존 테스트 (로컬 MySQL을 켜 둔 상태에서 실행)
+./mvnw verify
+
+# 프론트 타입 체크
+cd frontend && npm run typecheck
+```
+
+> ⚠️ 이 실습의 `note` 컬럼은 DB 스키마 변경이 전제입니다. **스키마/데이터 변경은 리뷰된 마이그레이션 절차로** 진행해야 하며(보안 규칙), 공유 DB에 직접 DDL을 날리지 마세요. 실습 환경(로컬)에서만 연습하세요.
+
+---
+
+## 6. 완료 체크리스트
+
+- [ ] `Employee`/`EmployeeResponse`의 실제 필드를 확인했다
+- [ ] `note` 추가의 영향 범위를 BE/FE로 나눠 파악했다
+- [ ] 영향 매트릭스를 파일:라인 근거와 함께 정리했다
+- [ ] (선택) 변경을 적용하고 `./mvnw verify` + `npm run typecheck`로 검증했다
+
+---
+
+## 7. 흔한 에러 & 해결
+
+| 증상 | 원인 | 해결 |
+|------|------|------|
+| 필드는 추가했는데 응답에 항상 `null` | 매퍼 SELECT 절에 컬럼 미추가 | `selectAllWithDepartment` 등 **모든** 조회 쿼리에 컬럼 추가 |
+| 프론트 빌드 타입 에러 | `types/api.ts` 미반영 | 백엔드 응답과 타입 필드 일치시키기 |
+| 저장해도 값이 안 들어감 | `insert`/`update`에 컬럼 누락 | 저장 쿼리 컬럼 목록에 추가(실습 ⑥의 "세터만 바꾸고 저장 안 함" 패턴 주의) |
+
+---
+
+## 8. 돌아보기
+
+- **"먼저 분석, 나중에 변경"**이 핵심입니다. 번지는 경로를 미리 알면 수정이 빠지거나(값 null) 깨지는(타입 에러) 사고를 예방합니다.
+- 이 추적 방식은 MyBatis가 아니어도(JPA, 다른 언어) **"데이터 모델 → 영속성 → 응답 → 클라이언트 타입 → 화면"** 경로로 동일하게 적용됩니다.
+- 다음 실습(⑤)에서는 이렇게 파악한 코드를 **품질 관점으로 리뷰**합니다.
+
+---
+
+이전 실습 ← [실습 ③ Feature Builder](./03-feature-builder.md) · 다음 실습 → [실습 ⑤ Reviewer](./05-reviewer.md)

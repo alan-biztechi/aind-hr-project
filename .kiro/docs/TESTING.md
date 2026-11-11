@@ -21,8 +21,9 @@ python3 .kiro/docs/validate_agents.py
 **실패 시 의미**
 - `JSON 파싱 실패` → 문법 오류. 해당 파일 수정.
 - `permissions 블록 없음` → V2 형식. `/upgrade-agent` 또는 재작성 필요.
-- `존재하지 않는 에이전트 참조` → 오케스트레이터가 부르는 이름과 파일명 불일치.
-- `tools 에 subagent 없음` → 오케스트레이터가 서브에이전트를 못 띄움.
+- `존재하지 않는 에이전트 참조` → 오케스트레이터의 `tools`(`subagent/<이름>`)나 `permissions`의 subagent 규칙이 부르는 이름과 파일명 불일치.
+- `tools 에 'subagent' 또는 'subagent/<이름>' 없음` → 오케스트레이터가 서브에이전트를 못 띄움.
+- WARNINGS의 `toolsSettings는 CLI V3에서 무시됨` → 서브에이전트 설정을 `tools`/`permissions`로 옮겨야 함.
 
 ---
 
@@ -34,11 +35,13 @@ Kiro가 6개 에이전트를 실제로 인식하는지 확인합니다.
 kiro-cli agent list
 ```
 
-**기대 결과**: `sa-orchestrator` + 리뷰어 5개가 모두 목록에 보임.
+**기대 결과**: `sa-orchestrator` + 서브에이전트 5개(리뷰어 4 + `risk-aggregator`)가 모두 Workspace 항목에 **`(v3 format)`** 표시와 함께 보임.
+(`sa-reviewer.md` 같은 Markdown 에이전트는 CLI 2.35.1의 `agent list`에 표시되지 않음 — IDE용)
 
 **실패 시 의미**
 - 일부만 보이거나 안 보임 → 로딩 스킵됨. 보통 스키마(permissions 누락) 문제.
   `kiro-cli agent upgrade .kiro/agents --dry-run` 으로 변환 필요 여부 확인.
+- `(v3 format)` 표시가 없는 에이전트 → V2 필드(`toolsSettings` 등)가 남은 universal 형식. V3 전용으로 맞추려면 해당 필드를 `tools`/`permissions`로 옮김.
 - 전혀 안 보임 → 워크스페이스 신뢰(trust) 문제이거나 경로 문제. 프로젝트 루트에서 실행했는지 확인.
 
 ---
@@ -48,7 +51,7 @@ kiro-cli agent list
 전체 파이프라인을 돌리기 전에, "스폰 자체가 되는지"만 싸게 확인합니다.
 
 ```bash
-kiro-cli --agent sa-orchestrator
+kiro-cli chat --v3 --agent sa-orchestrator
 ```
 
 세션 안에서 (파이프라인 전체 말고 한 단계만):
@@ -63,15 +66,16 @@ src/main/java/com/aind/hr 를 리뷰하게 하고, 결과를 그대로 보여줘
 - `[ARCH-n]` 형식의 findings가 돌아옴
 
 **실패 시 의미**
-- "서브에이전트를 스폰할 수 없음" → 오케스트레이터 `tools`에 `subagent` 누락 또는 permissions deny.
-- 리뷰어 호출마다 승인 프롬프트가 반복 → `trustedAgents`가 적용 안 된 것 (아래 Level 2.5 참고).
+- "서브에이전트를 스폰할 수 없음" → 오케스트레이터 `tools`에 `subagent/<이름>` 누락 또는 permissions deny, 또는 `--v3` 없이 V2 하네스로 실행.
+- 리뷰어 호출마다 승인 프롬프트가 반복 → `permissions`의 `subagent` 규칙이 적용 안 된 것 (아래 Level 2.5 참고).
 
 ---
 
-## Level 2.5 — trustedAgents 가 실제로 먹히는지 검증
+## Level 2.5 — 서브에이전트 승인 규칙이 실제로 먹히는지 검증
 
-`trustedAgents`에 등록된 에이전트는 **승인 프롬프트 없이 즉시 실행**됩니다. 공식 문서상 "적용됐는지"를
-직접 출력해주는 단일 명령은 없고, **관찰 가능한 신호**로 확인합니다.
+`permissions.rules`의 `subagent` 규칙(`match`)에 등록된 에이전트는 **시작할 때 승인 프롬프트 없이** 실행됩니다.
+이 규칙은 시작 승인만 면제하며, 서브에이전트의 도구 호출은 부모 세션 정책에 없으면 별도로 프롬프트가 뜰 수 있습니다.
+공식 문서상 "적용됐는지"를 직접 출력해주는 단일 명령은 없고, **관찰 가능한 신호**로 확인합니다.
 
 ### 신호 1 — 승인 프롬프트의 유무 (가장 직접적)
 
@@ -89,20 +93,21 @@ Level 2의 스모크 테스트에서 리뷰어를 스폰할 때:
 ### 신호 3 — 설정이 파싱됐는지 / 변환 필요 여부
 
 ```bash
-kiro-cli agent list                 # sa-orchestrator 가 그대로 뜨는지 (폴백 아님)
-/upgrade-agent                      # sa-orchestrator 가 '변환 필요' 목록에 뜨면 → 트러스트 미적용
-/upgrade-agent diagnostics          # 변환 경고 확인
+kiro-cli agent list                                       # sa-orchestrator 에 (v3 format) 표시가 있는지
+kiro-cli agent validate --path .kiro/agents/sa-orchestrator.json   # 오류 없이 끝나는지
+python3 .kiro/docs/validate_agents.py                     # WARNINGS 에 toolsSettings 경고가 없는지
 ```
-- `sa-orchestrator`가 `/upgrade-agent` 목록에 **나타나면** 설정이 아직 구형으로 간주돼 트러스트가
-  적용되지 않는 상태입니다. 나타나지 않으면 변환 불필요(정상).
+- `sa-orchestrator`에 `(v3 format)` 표시가 없으면 V2 필드가 남은 universal 형식입니다. V3는 `toolsSettings`를 무시하므로
+  `tools`의 `subagent/<이름>`과 `permissions`의 `subagent` 규칙으로 옮겨야 합니다.
 
 ### 적용 안 됐을 때 조치
 
-- 이 프로젝트의 `sa-orchestrator.json`은 이미 `permissions` 블록 + `toolsSettings.subagent`를
-  **함께** 두어(공식 권장 패턴) V3에서 스킵되지 않도록 했습니다.
-- 그래도 프롬프트가 반복되면: `/upgrade-agent`로 공식 변환을 수행하고, 변환 결과에서
-  `toolsSettings.subagent`가 어떻게 바뀌는지 확인하세요. (문서에 permissions 쪽 subagent 이름매칭
-  리터럴 예시가 없어, 변환기 출력이 가장 확실한 기준입니다.)
+- 이 프로젝트의 `sa-orchestrator.json`은 V3 전용입니다. `tools`에 `subagent/<이름>` 5개를 두고,
+  `permissions.rules`의 `{ "capability": "subagent", "match": [같은 5개], "effect": "allow" }`로 시작 승인을 면제합니다.
+  ([공식 문서](https://kiro.dev/docs/custom-agents/subagents/))
+- 그래도 프롬프트가 반복되면: `--v3`로 실행했는지, `match`의 이름이 에이전트 파일명(`name`)과 일치하는지 확인하세요.
+  서브에이전트의 **도구 호출** 승인은 부모 정책에 규칙이 없을 때 뜨므로, 리뷰어가 쓰는 `fs_read`와 읽기 전용 `shell`이
+  오케스트레이터의 `permissions`에도 허용돼 있는지 확인하세요.
 - 임시로 전부 자동승인하려면 세션에서 `/tools trust-all` (비대화형은 `--trust-all-tools`).
   단 이건 트러스트를 넓게 여는 것이라 검증 후 원복 권장.
 
@@ -111,7 +116,7 @@ kiro-cli agent list                 # sa-orchestrator 가 그대로 뜨는지 (�
 ## Level 3 — 전체 파이프라인 실행 (핵심 검증)
 
 ```bash
-kiro-cli --agent sa-orchestrator
+kiro-cli chat --v3 --agent sa-orchestrator
 ```
 
 세션 안에서:
@@ -177,8 +182,8 @@ ls -la .kiro/reports/
 | 증상 | 원인 | 조치 |
 |---|---|---|
 | `agent list`에 일부 누락 | V2 스키마 / 문법 오류 | `validate_agents.py` 실행 → `/upgrade-agent` |
-| 리뷰어 호출마다 승인 프롬프트 | `trustedAgents` V3 미적용 | 수동 승인으로 진행 가능. 또는 `agent upgrade`로 permissions 변환 확인 |
-| "서브에이전트 스폰 불가" | `subagent` 도구 누락 | `sa-orchestrator.json`의 `tools`에 `subagent` 포함 확인 |
+| 리뷰어 호출마다 승인 프롬프트 | `permissions`의 `subagent` 규칙 누락/이름 불일치, 또는 V2 하네스로 실행 | `--v3`로 실행, 규칙 `match`와 에이전트 이름 확인. 급하면 수동 승인으로 진행 |
+| "서브에이전트 스폰 불가" | `tools`에 `subagent/<이름>` 누락 | `sa-orchestrator.json`의 `tools`에 `subagent/<이름>` 포함 확인 |
 | 리뷰어가 파일을 못 읽음 | shell/read 권한 deny | 해당 리뷰어 `permissions`의 `fs_read`/`shell` allow 확인 |
 | 리포트 저장 실패 | `fs_write` 경로 제한 | `.kiro/reports/` 경로가 allow인지, 디렉터리 생성 가능한지 확인 |
 | 없는 리스크를 보고함(오탐) | 프롬프트 과잉 일반화 | 해당 리뷰어 프롬프트의 "기술 전제"를 더 좁힘 |

@@ -76,20 +76,25 @@ Architecture Review Report를 생성합니다.
   - `permissions.rules`: `{ capability, match, exclude, effect }` 형식.
     capability는 `fs_read`/`fs_write`/`shell`/`subagent` 등. effect는 `allow`/`ask`/`deny` (deny 우선).
   - 패턴은 **글롭만** 지원합니다(정규식 불가). 예: `rm *`, `src/**`, `*.ts`
-- V2의 `toolsSettings`/`allowedTools`는 제거되었습니다. (단, `subagent.availableAgents`/`trustedAgents`는
-  공식 permissions 리터럴 예시가 없어 `toolsSettings.subagent`에 병기해 두었습니다.)
+- V2의 `toolsSettings`/`allowedTools`는 제거되었습니다. **CLI V3는 `toolsSettings`를 무시**하므로, 서브에이전트는
+  이렇게 지정합니다. ([공식 문서](https://kiro.dev/docs/custom-agents/subagents/))
+  - 스폰 가능한 에이전트 제한: `tools`에 `subagent` 대신 `subagent/<이름>` 항목을 나열
+  - 승인 없이 시작할 에이전트: `permissions.rules`에 `{ "capability": "subagent", "match": ["<이름>", ...], "effect": "allow" }`
 - **서브에이전트는 사용 가능한 도구가 제한됩니다**: `read`/`write`/`shell`/MCP만 동작하고,
   전용 검색 도구(`grep`/`glob` 류)는 쓸 수 없습니다. 그래서 리뷰어들은 파일 탐색을
   `shell`의 `ls`/`grep`/`find`로 하도록 프롬프트에 명시했습니다.
 - 리뷰어들은 읽기 전용(`fs_read` allow + 쓰기 deny + 읽기 전용 `shell`)이라 코드를 수정하지 않습니다.
 - `sa-orchestrator`만 쓰기 권한이 있고, `fs_write`는 `.kiro/reports/**`만 allow, 그 외는 deny입니다.
-- 오케스트레이터는 `tools`에 `subagent`를 포함하고 `permissions`에서 `subagent: allow`로 두어 리뷰어를 스폰합니다.
+- 오케스트레이터는 `tools`에 `subagent/<리뷰어 이름>` 5개를 두고, `permissions`의 `subagent` 규칙(`match`에 같은 5개 이름)으로 승인 없이 스폰합니다. 이 규칙은 **시작 승인만** 면제하며, 서브에이전트의 도구 호출은 부모 세션 정책(`fs_read`·읽기 전용 `shell` 허용)으로 따로 판단됩니다.
 
 ## 요구 버전 / 주의
 
-- 이 설정은 **Kiro CLI V3 / IDE 1.0** 스키마입니다.
-- 구버전(2.x) 설정(`toolsSettings`+`allowedTools`, `permissions` 없음)은 V3에서 **로드되지 않고 스킵**됩니다.
-  만약 구버전 형식으로 되돌아간 파일이 있으면 CLI에서 `/upgrade-agent`로 변환하세요.
+- 이 설정은 **Kiro CLI V3 / IDE 1.0 전용** 스키마입니다 (`kiro-cli agent list`에서 `(v3 format)`으로 표시).
+- **CLI는 `--v3`로 실행하세요** (`kiro-cli chat --v3 --agent sa-orchestrator`). V2 하네스는 `permissions`를 읽지 않고
+  `toolsSettings`/`allowedTools`를 읽으므로, V3 전용 설정은 V2로 실행하면 의도대로 동작하지 않습니다.
+- 구버전(2.x) 형식(`toolsSettings`+`allowedTools`)이 남은 에이전트는 `/upgrade-agent`로 변환할 수 있습니다.
+  변환 결과는 V2와 V3를 모두 읽는 "universal" 형식(`(v3 format)` 표시 없음)입니다.
+- `sa-reviewer.md`처럼 Markdown 형식 에이전트는 IDE에서 사용하며, Kiro CLI 2.35.1의 `agent list`에는 표시되지 않습니다.
 - IDE에서 서브에이전트/병렬 실행은 Autopilot 모드에서 동작합니다.
 
 ## 검증 방법
@@ -108,7 +113,7 @@ kiro-cli agent list   # 6개 에이전트가 모두 보여야 함
 
 **3) 전체 실행**
 ```bash
-kiro-cli --agent sa-orchestrator
+kiro-cli chat --v3 --agent sa-orchestrator
 # 세션에서: "HR 시스템 전체 아키텍처 리뷰해줘"
 ```
 

@@ -1,0 +1,226 @@
+# 실습 ⑤. Reviewer — 코드 품질 검증
+
+> **과정**: 실무 활용
+> **소요 시간**: 기본 약 20분 (+ 선택 약 10분)
+> **AI 요청 횟수**: 기본 약 2회
+> **난이도**: ★★★☆☆
+> **실습 목표**: Kiro로 서비스 코드를 리뷰하고, 지적을 **심각도별 + 파일:라인 근거**로 정리해 실행 가능한 개선 항목으로 만든다. 범위를 넓힌 리뷰(컨트롤러·프론트엔드)는 선택으로 해 본다.
+
+---
+
+## 0. 이 실습에서 배우는 것
+
+- Kiro에게 **관점을 나눠** 코드 리뷰를 시키는 법 (버그/보안/성능/컨벤션)
+- 리뷰 결과를 **심각도별**로 정리하고 우선순위를 매기는 법
+- LLM 리뷰의 **환각(없는 문제 지어내기)**을 걸러내는 법
+
+> 💡 **왜 리뷰인가**: 기능이 "동작"하는 것과 "안전·일관"한 것은 다릅니다. 리뷰는 트랜잭션 누락, 과도한 예외 처리, 비밀정보 노출 같은 **조용한 리스크**를 코드 병합 전에 드러냅니다.
+
+---
+
+## 1. 리뷰 대상 선정
+
+이 프로젝트에는 리뷰로 잡을 만한 **실제 이슈가 여러 개** 있습니다. 범위는 두 단계로 나눕니다.
+
+| 구분 | 리뷰 대상 | 정답지에서 잡히는 것 |
+|------|-----------|----------------------|
+| **기본** | `EmployeeService.java`, `AttendanceService.java` 2개 파일 | 2·3·4번 |
+| 선택 | 컨트롤러·매퍼 포함 백엔드 전체, 실습 ③의 검색 기능, 실습 ②의 React 화면(`frontend/`) | 5번 + 프론트 지적 |
+
+1번(비밀번호 하드코딩)은 AI 없이 `grep`으로 확인합니다(3절).
+
+> 💡 이 실습의 지적들은 실습 ⑦(SA Orchestrator)에서 멀티에이전트가 자동으로 찾아낼 리스크와 같습니다. 여기서 **먼저 눈으로 확인**해 두면, ⑦에서 "리뷰가 진짜인지"를 판단할 기준이 생깁니다.
+
+> 💡 **범위를 좁히면 사용량도 줄어듭니다**: 리뷰 요청이 읽는 파일이 많을수록 Kiro 사용량이 늘어납니다. 먼저 파일 2개로 시작하고, 필요할 때만 범위를 넓히세요. 이전 실습의 대화가 길게 이어져 있다면 **새 대화**에서 시작하는 것도 방법입니다.
+
+---
+
+## 2. 리뷰 수행 (Kiro 활용)
+
+### 2-1. 기본 — 서비스 파일 2개 리뷰
+
+관점을 명시하고 **파일을 직접 지정**해 요청합니다. Kiro 채팅에 입력:
+
+```text
+#src/main/java/com/aind/hr/service/EmployeeService.java
+#src/main/java/com/aind/hr/service/AttendanceService.java
+위 두 파일만 리뷰해줘. 다른 파일은 읽지 않아도 돼.
+아래 관점으로 나눠서, 각 지적을 파일:라인 근거와 함께 심각도(Critical/High/Medium/Low)로 분류해줘.
+- 트랜잭션: @Transactional 유무와 필요성
+- 예외 처리: catch 범위가 적절한지, 처리 일관성
+- 성능: 반복문 안에서 DB를 호출하는 N+1 패턴이 있는지
+추측하지 말고 실제 코드에서 확인된 것만 지적해줘.
+```
+
+### 2-2. 선택 — 범위 넓히기
+
+더 보고 싶을 때만 아래를 사용합니다. 파일이 많아 **사용량이 크게 늘 수 있습니다.**
+
+```text
+src/main/java/com/aind/hr 의 서비스/컨트롤러/매퍼를 리뷰해줘.
+아래 관점으로 나눠서, 각 지적을 파일:라인 근거와 함께 심각도(Critical/High/Medium/Low)로 분류해줘.
+- 트랜잭션: @Transactional 유무와 필요성
+- 예외 처리: catch 범위가 적절한지, 처리 일관성
+- 성능: 반복문 안에서 DB를 호출하는 N+1 패턴이 있는지
+- 보안: 비밀정보 하드코딩, SQL 인젝션(${} 사용 여부)
+- 설계: 엔티티를 응답에 직접 노출하는지
+추측하지 말고 실제 코드에서 확인된 것만 지적해줘.
+```
+
+프론트엔드는 별도로:
+
+```text
+frontend/src 를 리뷰해줘. 타입 안정성, API 에러 처리, 서버 상태 관리(TanStack Query) 관점에서.
+```
+
+> 💡 **실무 팁 — "추측 말고 확인된 것만"을 프롬프트에 박아라**: LLM은 흔한 문제(예: `${}` SQL 인젝션)를 **실제로 없는데도** 지어내는 경향이 있습니다. "코드에서 확인된 것만"을 명시하면 환각이 줄어듭니다.
+
+---
+
+## 3. 정답지 — 실제로 잡혀야 할 것 / 지어내면 안 되는 것
+
+이 코드베이스를 직접 조사해 확인한 사실입니다. Kiro 리뷰 결과를 이것과 대조하세요.
+
+> 💡 **기본 경로(서비스 2개)에서 AI가 잡아야 하는 것은 2·3·4번**입니다. 1번은 아래 `grep`으로, 5번은 컨트롤러를 포함한 선택 리뷰에서 확인합니다.
+
+### ✅ 실제 존재하는 리스크 (리뷰에 나와야 함)
+
+| # | 심각도 | 위치 | 문제 | 근거(확인됨) |
+|---|--------|------|------|--------------|
+| 1 | High/Critical | `src/main/resources/application.yml` (테스트용 `application-test.yml`도 동일) | DB 접속 비밀번호 **평문 하드코딩** (키: `spring.datasource.password`) | 설정 파일에 값이 그대로 들어 있음 (값은 문서에 옮겨 적지 않음) |
+| 2 | High | `service/*.java` 전체 | **`@Transactional` 전무** — 다중 쓰기 작업의 원자성 보장 없음 | `grep -rn "Transactional" src/main/java` → **0건** |
+| 3 | High | `service/AttendanceService.java` `getAttendanceByDate` | **N+1 쿼리** — 출퇴근 목록을 돌며 직원을 1건씩 개별 조회 | 루프 안에서 `employeeRepository.selectById(...)` 호출 (코드 주석에 "[의도적 N+1 결함]" 명시) |
+| 4 | Medium/High | `service/EmployeeService.java` `createEmployee` (L44) | **광범위 `catch(Exception e)`** — 모든 예외를 "등록 실패"로 뭉갬 (원인 유실) | `grep -rn "catch (Exception" src/main/java` → 3곳(`EmployeeService`, `AttendanceService.checkIn`, `LeaveRequestService`). `EmployeeService`는 `createEmployee`만 try-catch, update/delete엔 없어 **처리도 비일관** |
+| 5 | Medium | `controller/EmployeeController.getEmployeesByDepartment`, `AttendanceController.getAttendanceByEmployee`, `LeaveRequestController.getLeaveRequestsByEmployee` | **엔티티(`Employee`/`Attendance`/`LeaveRequest`)를 응답에 직접 노출** | 응답 타입이 `*Response`가 아니라 엔티티 |
+
+> ⚠️ **참고 — 실습 ⑥과 연결**: 위 4번(광범위 catch)과 같은 패턴이 `AttendanceService.checkIn`에도 있습니다. 같은 서비스의 `checkOut`에는 더 심각한 "조퇴 상태 저장 누락" 버그가 있습니다. 이건 실습 ⑥에서 직접 수정합니다.
+
+### 🔬 깊이 보기 (선택, 읽기용) — 3번 N+1 쿼리 (실무에서 가장 흔한 성능 결함)
+
+`getAttendanceByDate`는 날짜별 출퇴근 목록을 만들 때, 레코드마다 직원을 **개별 쿼리**로 조회합니다.
+
+```java
+// AttendanceService.getAttendanceByDate — 문제 코드 (요약)
+List<Attendance> attendances = attendanceRepository.selectByWorkDate(workDate); // 쿼리 1번
+for (Attendance a : attendances) {
+    // ...
+    Employee emp = employeeRepository.selectById(a.getEmployeeId());  // ← 레코드 수만큼 쿼리!
+    if (emp != null) response.setEmployeeName(emp.getName());
+}
+```
+
+**왜 문제인가**: 하루 출퇴근이 100건이면 `1(목록) + 100(직원) = 101번` 쿼리가 나갑니다. 데이터가 늘수록 선형으로 느려지고 DB 부하가 커집니다. 이것이 전형적인 **N+1 문제**입니다.
+
+**개선 방향**: 이미 이 프로젝트에는 **조인 쿼리**가 존재합니다. `selectAllWithEmployee`(`AttendanceMapper.xml`)는 `employee`·`department`를 `INNER JOIN`해 **한 번에** 직원명·부서명을 가져옵니다. 같은 방식의 "날짜별 조인 조회"를 추가하면 쿼리 1번으로 끝납니다.
+
+```xml
+<!-- AttendanceMapper.xml — 날짜 조건을 가진 조인 버전 (개선 예시) -->
+<select id="selectByWorkDateWithEmployee"
+        resultType="com.aind.hr.model.response.AttendanceResponse">
+    SELECT a.id, a.employee_id, e.name AS employee_name, d.name AS department_name,
+           a.work_date, a.check_in, a.check_out, a.status, a.note, a.created_at
+    FROM attendance a
+    INNER JOIN employee e ON a.employee_id = e.id
+    INNER JOIN department d ON e.department_id = d.id
+    WHERE a.work_date = #{workDate}
+    ORDER BY a.employee_id
+</select>
+```
+
+```java
+// Service — 루프 제거, 조인 조회 1번으로
+public List<AttendanceResponse> getAttendanceByDate(LocalDate workDate) {
+    return attendanceRepository.selectByWorkDateWithEmployee(workDate);
+}
+```
+
+> 💡 **실무 팁 — N+1은 "눈에 안 보여서" 위험**: 기능은 정상 동작하고 테스트도 통과합니다. 데이터가 적을 땐 느린 줄도 모릅니다. 운영에서 데이터가 쌓인 뒤 터집니다. 그래서 **리뷰 단계에서 루프 안의 DB 호출**을 찾는 습관이 중요합니다.
+
+> ⚠️ 위 개선 쿼리는 실습용 예시입니다. 실제로 적용·검증하려면 인터페이스(`selectByWorkDateWithEmployee`) 추가와 `./mvnw verify`가 필요합니다. (이 실습에서는 "리뷰로 찾아내기"까지가 목표)
+
+### 🚫 지어내면 환각 (리뷰에 나오면 안 됨)
+
+| 지적 | 왜 오탐인가 |
+|------|-------------|
+| "매퍼 XML `${}` SQL 인젝션" | 이 프로젝트 매퍼는 **전부 `#{}`** 사용. `${}` 패턴 **없음** |
+| "입력 검증 전무" | 생성/수정 컨트롤러엔 이미 `@Valid`가 적용됨 (`EmployeeController`, `AttendanceController` 등) |
+
+**사람이 교차검증하는 명령:**
+
+```bash
+# 1번 — 비밀번호 하드코딩
+grep -n "password" src/main/resources/application.yml
+
+# 2번 — @Transactional 부재 (0건이어야 정답)
+grep -rn "Transactional" src/main/java || echo "없음 (정답지 성립)"
+
+# 오탐 방지 — ${} 없어야 정상
+grep -rn '\${' src/main/resources/mapper || echo "없음 (오탐 방지 항목)"
+
+# 오탐 방지 — @Valid 적용 지점
+grep -rn "@Valid" src/main/java
+```
+
+---
+
+## 4. 리뷰 결과 정리
+
+지적을 심각도순으로 정리합니다. (예시 — Kiro 결과로 채우기)
+
+| 심각도 | 위치 | 문제 | 권고 |
+|--------|------|------|------|
+| Critical/High | `application.yml` | DB 비밀번호 평문 | 환경변수/시크릿으로 분리, 샘플엔 placeholder (리뷰 결과에도 값은 적지 않고 키 이름과 위치만 기록) |
+| High | 모든 Service | `@Transactional` 없음 | 쓰기 작업(생성/수정/삭제)에 `@Transactional` 적용 |
+| High | `AttendanceService.getAttendanceByDate` | 루프 안 개별 조회(N+1) | 날짜 조건 `JOIN` 쿼리 1번으로 대체 |
+| Medium | `EmployeeService.createEmployee` | 광범위 catch | `DuplicateKeyException` 등 구체 예외만 매핑, 나머지 로깅+재던짐 |
+| Medium | 일부 Controller | 엔티티 직접 노출 | `*Response` DTO로 변환해 반환 |
+
+---
+
+## 5. 개선 적용
+
+우선순위가 높은 항목부터 수정하고 재검증합니다. **보안 규칙상** `application.yml`의 비밀번호를 **실제 값이 담긴 채로 커밋하지 마세요** — placeholder/환경변수로 바꾼 뒤 커밋합니다.
+
+```bash
+# 코드 수정 후 (로컬 MySQL을 켜 둔 상태에서 실행)
+./mvnw verify
+```
+
+> 💡 **실무 팁 — 전부 고치지 말고 우선순위대로**: 리뷰 지적을 한꺼번에 다 고치면 리스크가 커집니다. Critical/High부터 작은 단위로 수정→검증을 반복하세요.
+
+---
+
+## 6. 완료 체크리스트
+
+**기본**
+- [ ] 서비스 파일 2개를 관점별로 리뷰했다
+- [ ] 지적을 심각도 + 파일:라인 근거로 정리했다
+- [ ] 정답지 2·3·4번(트랜잭션·N+1·광범위 catch)이 리뷰에 나왔다
+- [ ] 1번(비밀번호 하드코딩)을 `grep`으로 확인했다
+- [ ] 오탐(`${}` 인젝션, "검증 전무")이 나오지 않았다 (환각 없음)
+
+**선택**
+- [ ] 컨트롤러까지 넓혀 5번(엔티티 직접 노출)을 확인했다
+- [ ] 프론트엔드 코드를 리뷰했다
+- [ ] 핵심 항목을 수정하고 `./mvnw verify`로 재확인했다
+
+---
+
+## 7. 흔한 문제 & 해결
+
+| 증상 | 원인 | 해결 |
+|------|------|------|
+| 리뷰가 없는 문제를 지어냄 | 프롬프트 과잉 일반화 | "코드에서 확인된 것만" + grep 교차검증 |
+| 지적이 너무 두루뭉술 | 관점/범위 미지정 | 트랜잭션/예외/보안/설계로 관점을 쪼개 요청 |
+| 심각도 기준이 제각각 | 기준 미제공 | `architecture-rules.md`의 심각도 정의(Critical/High/Medium/Low) 사용 |
+
+---
+
+## 8. 돌아보기
+
+- 리뷰의 가치는 **"동작하지만 위험한" 코드**를 드러내는 데 있습니다. 그리고 **정답지로 교차검증**해야 리뷰 자체를 신뢰할 수 있습니다.
+- 여기까지는 **한 에이전트**가 전체를 훑는 단일 리뷰입니다. 실습 ⑦에서는 **여러 전문 리뷰어를 조율**하는 멀티에이전트 리뷰로 확장합니다.
+
+---
+
+이전 실습 ← [실습 ④ Analyzer](./04-analyzer.md) · 다음 실습 → [실습 ⑥ Skills](./06-skills.md)
