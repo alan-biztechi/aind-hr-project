@@ -64,7 +64,7 @@
 
 ### 2-3. Hook 자동화 (실습 ⑤)
 
-- `frontend-conventions.md`의 규칙을 내 프로젝트 것으로 바꾼다. 훅(`convention-review.json`)은 그대로 쓸 수 있습니다.
+- `frontend-conventions.md`의 규칙을 내 프로젝트 것으로 바꾼다. 훅(`pre-commit-check.json`)은 그대로 쓸 수 있습니다.
 - `pr-workflow.md`의 빌드 명령과 기준 브랜치를 내 프로젝트에 맞게 바꾼다.
 - 반드시 지켜야 하는 규칙은 린터를 빌드에 넣고, 훅의 `command` 액션으로 실행한다.
 

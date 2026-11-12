@@ -2,9 +2,9 @@
 
 > **과정**: 실무 활용
 > **소요 시간**: 약 30분
-> **AI 요청 횟수**: 약 4회
+> **AI 요청 횟수**: 약 5회
 > **난이도**: ★★★☆☆
-> **실습 목표**: 프론트엔드 코드 컨벤션을 Steering으로 정하고, **훅이 변경 직후 자동으로 컨벤션을 점검**하게 한다. 이어서 `/pr-workflow` 한 줄로 format → lint → build부터 PR 본문 작성까지 진행한다.
+> **실습 목표**: 프론트엔드 코드 컨벤션을 Steering으로 정하고, **커밋을 요청하면 훅이 커밋 직전에 자동으로 점검**하게 한다. 이어서 `/pr-workflow` 한 줄로 format → lint → build부터 PR 본문 작성까지 진행한다.
 
 ---
 
@@ -14,7 +14,7 @@
 - 지시문만 적으면 되는 **Ask Kiro(`agent`) 훅**
 - 필요할 때 실행하는 워크플로를 **슬래시 명령(`/pr-workflow`)**으로 만드는 법
 
-> 💡 **왜 Hook인가**: "화면 코드 고친 뒤 컨벤션 확인", "PR 올리기 전 빌드·본문 작성"처럼 좋은 절차도 사람이 매번 기억해야 하면 결국 빠집니다. Hook은 이런 일을 **이벤트에 묶어 자동으로** 돌립니다.
+> 💡 **왜 Hook인가**: "커밋 전에 lint·build·컨벤션 확인", "PR 올리기 전 본문 작성"처럼 좋은 절차도 사람이 매번 기억해야 하면 결국 빠집니다. Hook은 이런 일을 **이벤트에 묶어 자동으로** 돌립니다.
 
 ---
 
@@ -25,24 +25,25 @@
 | 파일 | 역할 |
 |------|------|
 | `.kiro/steering/frontend-conventions.md` | 프론트 컨벤션 (처음엔 F1~F7). `frontend/src/` 파일을 다룰 때 자동으로 대화에 포함됩니다 (`inclusion: fileMatch`). |
-| `.kiro/hooks/convention-review.json` | **훅**. 에이전트가 응답을 마칠 때, 이번 턴에 고친 `frontend/src/` 파일을 `frontend-conventions.md`의 규칙으로 점검합니다. |
+| `.kiro/hooks/pre-commit-check.json` | **훅**. Kiro가 `git commit`을 실행하기 **직전에** format·lint·build와 컨벤션을 점검하고, 실패하면 커밋하지 않습니다. |
 | `.kiro/steering/pr-workflow.md` | **`/pr-workflow`** 슬래시 명령. `frontend/`에서 format → lint:fix → lint → build, 컨벤션 점검 → PR 템플릿 작성 → 최종 확인을 차례로 진행합니다 (`inclusion: manual`). |
 | `.github/pull_request_template.md` | PR 본문 형식 |
 
 ### 훅 파일 구조
 
-`.kiro/hooks/convention-review.json`을 엽니다.
+`.kiro/hooks/pre-commit-check.json`을 엽니다.
 
 ```json
 {
   "version": "v1",
   "hooks": [
     {
-      "name": "Frontend convention review after changes",
-      "trigger": "Stop",
+      "name": "Pre-commit check (frontend)",
+      "trigger": "PreToolUse",
+      "matcher": "shell",
       "action": {
         "type": "agent",
-        "prompt": "이번 턴에 frontend/src/ 아래 파일(.ts, .tsx)을 수정했다면, ... frontend-conventions.md 의 모든 규칙 기준으로 점검하고 ... 보고만 해. ... 수정하지 않았다면 아무 말도 하지 말고 끝내."
+        "prompt": "지금 실행하려는 셸 명령이 git commit 이 아니면 이 지시는 무시하고 그대로 진행해. git commit 이면 커밋하기 전에 ... 점검해. ... 하나라도 실패하면 커밋하지 말고 ... 모두 통과했을 때만 원래 git commit 을 실행해."
       }
     }
   ]
@@ -51,31 +52,36 @@
 
 | 필드 | 뜻 |
 |------|-----|
-| `trigger` | **언제** 실행하나. `Stop`은 에이전트가 한 턴의 응답을 마쳤을 때 |
+| `trigger` | **언제** 실행하나. `PreToolUse`는 에이전트가 도구를 쓰기 **직전** |
+| `matcher` | **어떤 도구**에 반응하나. `shell`은 셸 명령 도구 전체 |
 | `action.type` | **무엇을** 하나. `agent`(Ask Kiro)는 지시문을 에이전트에게 전달하고, `command`(Run Command)는 셸 명령을 실행 |
-| `action.prompt` | 에이전트에게 전달할 지시문 |
+| `action.prompt` | 에이전트에게 전달할 지시문. 여기서 "셸 명령이 `git commit`일 때만" 동작하도록 걸러 냅니다. |
 
 주요 트리거는 이렇습니다.
 
 | 트리거 | 언제 |
 |--------|------|
 | `PostFileSave` / `PostFileCreate` / `PostFileDelete` | **에이전트가** 파일을 저장·생성·삭제할 때 (`matcher`로 경로 필터) |
-| `PreToolUse` / `PostToolUse` | 에이전트가 도구를 쓰기 전/후 |
+| `PreToolUse` / `PostToolUse` | 에이전트가 도구를 쓰기 전/후 (`matcher`로 도구 필터) |
 | `Stop` | 에이전트가 한 턴의 응답을 마쳤을 때 |
 | `PreTaskExec` / `PostTaskExec` | Spec 작업 시작 전/완료 후 |
 | `SessionStart` / `UserPromptSubmit` | 세션 시작 / 프롬프트 전송 시 |
 
-> 💡 **왜 `Stop`인가**: 에이전트가 파일을 여러 개 고치면 `PostFileSave`는 파일마다 돌아서 AI를 여러 번 부릅니다. `Stop`은 **한 턴에 한 번**만 돌아서 빠르고 사용량이 적습니다.
+> 💡 **왜 커밋 직전인가**: 코드를 고칠 때마다 점검하면 작업 중간에도 계속 결과가 쏟아집니다. 사람이 "이제 커밋해줘"라고 한 **그 순간에 한 번** 점검하면, 작업 흐름을 끊지 않고 커밋에 들어갈 코드만 확인할 수 있습니다.
 
-> 💡 **버튼으로 실행하는 훅은 어디 갔나**: 예전 IDE의 수동(버튼) 트리거 훅은 지금은 새로 만들 수 없습니다. Kiro 공식 문서는 필요할 때 실행하는 작업을 `inclusion: manual` Steering으로 만들어 `/파일이름`으로 실행하라고 안내합니다. `/pr-workflow`가 그 방식입니다. 지시문을 적는 방식은 예전 버튼 훅의 "Ask Kiro"와 같습니다.
+> 💡 **수동으로 돌리는 방법**: 예전 IDE의 수동(버튼) 트리거 훅은 지금은 새로 만들 수 없습니다(Kiro 공식 문서). 이 훅은 **"커밋해줘"라는 요청이 곧 실행 버튼** 역할을 합니다. 커밋과 상관없이 원할 때 점검하려면 `/pr-workflow`를 씁니다.
 
-훅이 로드됐는지는 IDE 탐색기의 **Agent Hooks** 섹션에서 확인합니다. 훅은 **새 세션**부터 적용되니, 새 대화를 열고 진행하세요.
+> ⚠️ **Kiro를 거치지 않은 커밋에는 돌지 않습니다**: 터미널이나 IDE의 Git 화면에서 직접 `git commit`하면 Kiro 훅은 실행되지 않습니다. 이 훅은 **Kiro에게 커밋을 요청할 때만** 동작합니다. 모든 커밋에 강제하려면 git 자체의 pre-commit 훅이 필요합니다.
+
+> 💡 이 훅은 셸 명령마다 지시문이 함께 전달되므로, Kiro가 `ls`나 `npm run` 같은 명령을 실행할 때도 "커밋이 아니라서 그대로 진행한다"는 짧은 안내가 보일 수 있습니다. 정상입니다.
+
+훅이 로드됐는지는 IDE 탐색기의 **Agent Hooks** 섹션에서 확인합니다.
 
 ---
 
-## 2. 훅 동작 확인 — 일부러 위반하기 (AI 1회)
+## 2. 훅 동작 확인 — 위반이 있으면 커밋이 멈추는지 (AI 2회)
 
-기본 에이전트 채팅에 입력합니다.
+**① 위반 코드 넣기.** 기본 에이전트 채팅에 입력합니다.
 
 ```text
 실습용이야. 컨벤션 위반인 걸 알고 있으니 그대로 해줘.
@@ -83,35 +89,40 @@ frontend/src/pages/EmployeesPage.tsx 의 EmployeesPage() 함수 첫 줄에
 console.log("직원 페이지 렌더링"); 을 추가해줘.
 ```
 
+이 단계에서는 점검이 돌지 않습니다. 아직 커밋을 요청하지 않았기 때문입니다.
+
+**② 커밋 요청하기.** 이어서 입력합니다.
+
+```text
+방금 바꾼 EmployeesPage.tsx만 스테이징해서 "실습: 콘솔 로그 추가" 메시지로 커밋해줘.
+```
+
 **기대 결과**
-1. Kiro가 코드를 추가합니다. `frontend-conventions.md`가 대화에 포함돼 있어서, 추가하기 전에 "F6 위반"이라고 먼저 경고할 수도 있습니다. 그것도 Steering이 동작한 것입니다.
-2. 응답이 끝나면 **훅이 실행되어** 점검 표가 이어서 나옵니다.
+1. Kiro가 `git commit`을 실행하려는 순간 **훅이 실행되어** 점검을 먼저 합니다.
+2. 점검 표가 나옵니다. `format:check`, `lint`, `build`는 통과하고, 컨벤션에서 **F6 위반**이 나옵니다.
 
    | 규칙 번호 | 파일:라인 | 설명 |
    |-----------|-----------|------|
    | F6 | `EmployeesPage.tsx:22` 근처 | `console.*` 금지 |
 
-3. 표가 나온 뒤에는 훅이 다시 돌아도 "이번 턴에 수정하지 않았다면 아무 말도 하지 말고 끝내" 지시 때문에 조용히 끝납니다.
+3. 위반이 있으므로 **커밋하지 않고** 멈춥니다. 확인합니다.
 
-> 💡 **lint와 무엇이 다른가**: 이 프로젝트의 ESLint 설정은 `console.log`를 막지 않아서 `npm run lint`로는 통과합니다. 훅은 도구가 모르는 **프로젝트 규칙**(F1~F7)을 Steering 기준으로 점검합니다.
+   ```bash
+   git log --oneline -1   # "실습: 콘솔 로그 추가" 커밋이 없어야 함
+   ```
 
-이번에는 코드를 고치지 않는 질문을 해 봅니다.
-
-```text
-EmployeesPage는 무슨 역할을 하는 화면이야?
-```
-
-**기대 결과**: 답변 뒤에 점검 표가 **나오지 않습니다**. 이번 턴에 `frontend/src/` 파일을 고치지 않았기 때문입니다.
+> 💡 **lint와 무엇이 다른가**: 이 프로젝트의 ESLint 설정은 `console.log`를 막지 않아서 `npm run lint`는 통과합니다. 훅은 도구가 모르는 **프로젝트 규칙**(F1~F7)까지 커밋 전에 점검합니다.
 
 **되돌리기**
 
 ```bash
+git restore --staged frontend/src/pages/EmployeesPage.tsx
 git checkout -- frontend/src/pages/EmployeesPage.tsx
 ```
 
 ---
 
-## 3. 프로젝트에 맞게 개선 — 컨벤션 하나 추가하기 (AI 1회)
+## 3. 프로젝트에 맞게 개선 — 컨벤션 하나 추가하기 (AI 2회)
 
 이 프로젝트의 컴포넌트 props 타입은 모두 `interface <컴포넌트명>Props` 형태입니다(`ModalProps`, `DataTableProps` 등). 이 규칙을 컨벤션에 추가합니다.
 
@@ -123,7 +134,7 @@ git checkout -- frontend/src/pages/EmployeesPage.tsx
 
 훅과 `/pr-workflow`는 고칠 필요가 없습니다. 둘 다 "`frontend-conventions.md`의 **모든 규칙**"을 기준으로 점검하도록 적혀 있어서, Steering에 추가한 규칙을 그대로 따릅니다.
 
-**새 대화**를 열고 입력합니다.
+**새 대화**를 열고 차례로 입력합니다.
 
 ```text
 실습용이야. 컨벤션 위반인 걸 알고 있으니 그대로 해줘.
@@ -131,13 +142,18 @@ frontend/src/components/common/Divider.tsx 를 새로 만들어줘.
 props 타입은 type Props = { label: string } 로 하고, label을 <hr> 아래에 보여주는 컴포넌트야.
 ```
 
-**기대 결과**: 훅 점검 표에 **F8 위반**(`type Props`)이 나오면 성공입니다.
+```text
+Divider.tsx만 스테이징해서 "실습: Divider 추가" 메시지로 커밋해줘.
+```
+
+**기대 결과**: 커밋 직전 점검에서 **F8 위반**(`type Props`)이 나오고, 커밋하지 않고 멈추면 성공입니다.
 
 > 💡 규칙 한 줄을 추가했더니 훅의 점검 기준이 바로 바뀌었습니다. 훅은 지시문만 들고 있고, **기준은 Steering 한 곳**에 있어서 규칙을 고칠 곳이 하나뿐입니다.
 
 **되돌리기** (새로 만든 파일만 지우고, 추가한 F8은 남겨도 됩니다)
 
 ```bash
+git restore --staged frontend/src/components/common/Divider.tsx
 rm frontend/src/components/common/Divider.tsx
 ```
 
@@ -169,10 +185,9 @@ rm frontend/src/components/common/Divider.tsx
 
 ## 5. 완료 체크리스트
 
-- [ ] 훅 파일에서 `trigger`와 `action`의 뜻을 설명할 수 있다
-- [ ] 위반 코드를 추가시켰더니 훅이 F6 위반을 보고했다
-- [ ] 코드를 고치지 않은 질문에서는 훅이 아무것도 보고하지 않았다
-- [ ] F8을 추가했고, 훅이 F8 위반을 보고했다
+- [ ] 훅 파일에서 `trigger`, `matcher`, `action`의 뜻을 설명할 수 있다
+- [ ] 위반 코드를 넣은 뒤 커밋을 요청했더니, 훅이 F6 위반을 보고하고 커밋하지 않았다
+- [ ] F8을 추가했고, 커밋 직전 점검에서 F8 위반이 나왔다
 - [ ] `/pr-workflow`로 PR 본문을 받았다
 - [ ] 실습 중 바꾸거나 만든 코드를 되돌렸다
 
@@ -182,13 +197,15 @@ rm frontend/src/components/common/Divider.tsx
 
 | 증상 | 원인 | 해결 |
 |------|------|------|
-| 훅이 실행되지 않음 | 훅을 추가하거나 고친 뒤 같은 세션을 계속 씀 | 새 대화(세션)를 열고 다시 시도 |
-| 훅 파일을 고친 뒤 Agent Hooks에서 사라짐 | `prompt`의 따옴표를 지워 JSON이 깨짐 | `git checkout -- .kiro/hooks/convention-review.json` 후 다시 수정 |
+| 훅이 실행되지 않음 | Agent Hooks 섹션에 훅이 없거나 비활성 | Agent Hooks에서 훅을 켜고, 안 되면 새 대화에서 다시 시도 |
+| 터미널에서 커밋했더니 점검이 없음 | Kiro 훅은 Kiro가 실행하는 명령에만 반응 | Kiro에게 커밋을 요청 |
+| 위반이 있는데 커밋됨 | `agent` 훅은 지시문이라 모델이 지시를 놓칠 수 있음 | `git reset --soft HEAD~1`로 커밋을 풀고 다시 요청. 반드시 막아야 하면 `command` 훅(종료 코드 2로 차단)을 씀 |
+| 훅 파일을 고친 뒤 Agent Hooks에서 사라짐 | `prompt`의 따옴표를 지워 JSON이 깨짐 | `git checkout -- .kiro/hooks/pre-commit-check.json` 후 다시 수정 |
 | F8이 점검되지 않음 | 규칙을 추가한 뒤 같은 대화를 계속 씀 | 새 대화에서 다시 요청 |
-| 점검 표가 계속 반복됨 | 훅 지시문의 "수정하지 않았다면 아무 말도 하지 말고 끝내"가 빠짐 | 지시문 끝 문장을 되살리기 |
+| 커밋이 아닌 명령에도 점검이 돎 | 지시문 첫 문장("`git commit`이 아니면 무시")이 빠짐 | 지시문 첫 문장을 되살리기 |
 | Kiro가 위반 코드를 거부함 | Steering이 컨벤션 위반을 막음 | 요청에 "실습용이야. 위반인 걸 알고 있으니 그대로 해줘"를 넣기 |
 | `/pr-workflow`가 목록에 없음 | 파일 이름이나 front-matter(`inclusion: manual`)가 다름 | `.kiro/steering/pr-workflow.md`와 첫 3줄 확인 |
-| `npm run format`/`lint`가 없다고 나옴 | `frontend/`에서 `npm install`을 하지 않음 | `cd frontend && npm install` |
+| `npm run format`/`format:check`/`lint`가 없다고 나옴 | `frontend/`에서 `npm install`을 하지 않음 | `cd frontend && npm install` |
 | 빌드 단계 실패 | Node 미설치 또는 타입 오류 | 실습 ⓪의 환경 확인. 실패도 결과로 보고되는 것이 정상 |
 
 ---
