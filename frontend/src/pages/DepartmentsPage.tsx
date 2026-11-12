@@ -6,10 +6,7 @@ import { DataTable } from "@/components/common/DataTable";
 import type { Column } from "@/components/common/DataTable";
 import { Modal } from "@/components/common/Modal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import {
-  DepartmentForm,
-  type DepartmentFormValues,
-} from "@/components/forms/DepartmentForm";
+import { DepartmentForm, type DepartmentFormValues } from "@/components/forms/DepartmentForm";
 import {
   useCreateDepartment,
   useDeleteDepartment,
@@ -79,11 +76,7 @@ export function DepartmentsPage() {
       width: "150px",
       render: (d) => (
         <div style={{ display: "flex", gap: "0.4rem" }}>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => openEdit(d)}
-          >
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => openEdit(d)}>
             수정
           </button>
           <button
@@ -112,9 +105,7 @@ export function DepartmentsPage() {
 
       {isLoading && <Spinner />}
       {isError && <ErrorState error={error} onRetry={() => refetch()} />}
-      {data && (
-        <DataTable columns={columns} rows={data} rowKey={(d) => d.id} />
-      )}
+      {data && <DataTable columns={columns} rows={data} rowKey={(d) => d.id} />}
 
       <Modal
         open={formOpen}

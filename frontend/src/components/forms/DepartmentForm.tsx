@@ -38,10 +38,7 @@ export function DepartmentForm({
 
       <div className="field">
         <label htmlFor="dept-name">부서명 *</label>
-        <input
-          id="dept-name"
-          {...register("name", { required: "부서명은 필수입니다." })}
-        />
+        <input id="dept-name" {...register("name", { required: "부서명은 필수입니다." })} />
         {errors.name && <span className="field-error">{errors.name.message}</span>}
       </div>
 
@@ -51,12 +48,7 @@ export function DepartmentForm({
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={onCancel}
-          disabled={submitting}
-        >
+        <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={submitting}>
           취소
         </button>
         <button type="submit" className="btn btn-primary" disabled={submitting}>

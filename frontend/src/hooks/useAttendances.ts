@@ -1,20 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  checkIn,
-  checkOut,
-  getAttendances,
-  getAttendancesByDate,
-} from "@/api/attendances";
+import { checkIn, checkOut, getAttendances, getAttendancesByDate } from "@/api/attendances";
 
 const ATTENDANCES_KEY = ["attendances"] as const;
 
 export function useAttendances(workDate?: string) {
   return useQuery({
-    queryKey: workDate
-      ? ([...ATTENDANCES_KEY, { workDate }] as const)
-      : ATTENDANCES_KEY,
-    queryFn: () =>
-      workDate ? getAttendancesByDate(workDate) : getAttendances(),
+    queryKey: workDate ? ([...ATTENDANCES_KEY, { workDate }] as const) : ATTENDANCES_KEY,
+    queryFn: () => (workDate ? getAttendancesByDate(workDate) : getAttendances()),
   });
 }
 

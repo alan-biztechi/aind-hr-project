@@ -23,8 +23,7 @@ const DEFAULT_ERROR_MESSAGE = "요청 처리 중 오류가 발생했습니다.";
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<Partial<ResultResponse>>) => {
-    const message =
-      error.response?.data?.message ?? error.message ?? DEFAULT_ERROR_MESSAGE;
+    const message = error.response?.data?.message ?? error.message ?? DEFAULT_ERROR_MESSAGE;
     return Promise.reject(new Error(message));
   },
 );

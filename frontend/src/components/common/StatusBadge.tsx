@@ -41,8 +41,7 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ kind, value }: StatusBadgeProps) {
-  const map =
-    kind === "attendance" ? ATTENDANCE : kind === "leave" ? LEAVE : EMPLOYEE;
+  const map = kind === "attendance" ? ATTENDANCE : kind === "leave" ? LEAVE : EMPLOYEE;
   const entry = map[value] ?? { label: value, color: "gray" as const };
   const palette = COLORS[entry.color];
 

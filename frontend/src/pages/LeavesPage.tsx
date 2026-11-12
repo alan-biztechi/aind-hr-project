@@ -39,8 +39,7 @@ export function LeavesPage() {
       },
       {
         onSuccess: () => setFormOpen(false),
-        onError: (e) =>
-          setFormError(e instanceof Error ? e.message : "신청 실패"),
+        onError: (e) => setFormError(e instanceof Error ? e.message : "신청 실패"),
       },
     );
   };
@@ -87,9 +86,7 @@ export function LeavesPage() {
         <select
           id="emp-filter"
           value={empFilter ?? ""}
-          onChange={(e) =>
-            setEmpFilter(e.target.value ? Number(e.target.value) : undefined)
-          }
+          onChange={(e) => setEmpFilter(e.target.value ? Number(e.target.value) : undefined)}
         >
           <option value="">전체</option>
           {employees?.map((e) => (
@@ -102,9 +99,7 @@ export function LeavesPage() {
 
       {isLoading && <Spinner />}
       {isError && <ErrorState error={error} onRetry={() => refetch()} />}
-      {data && (
-        <DataTable columns={columns} rows={data} rowKey={(l) => l.id} />
-      )}
+      {data && <DataTable columns={columns} rows={data} rowKey={(l) => l.id} />}
 
       <Modal open={formOpen} title="휴가 신청" onClose={() => setFormOpen(false)}>
         <LeaveForm

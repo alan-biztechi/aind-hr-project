@@ -5,12 +5,8 @@ const LEAVES_KEY = ["leaves"] as const;
 
 export function useLeaves(employeeId?: number) {
   return useQuery({
-    queryKey:
-      employeeId != null
-        ? ([...LEAVES_KEY, { employeeId }] as const)
-        : LEAVES_KEY,
-    queryFn: () =>
-      employeeId != null ? getLeavesByEmployee(employeeId) : getLeaves(),
+    queryKey: employeeId != null ? ([...LEAVES_KEY, { employeeId }] as const) : LEAVES_KEY,
+    queryFn: () => (employeeId != null ? getLeavesByEmployee(employeeId) : getLeaves()),
   });
 }
 

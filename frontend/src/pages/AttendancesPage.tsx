@@ -6,15 +6,8 @@ import { DataTable } from "@/components/common/DataTable";
 import type { Column } from "@/components/common/DataTable";
 import { Modal } from "@/components/common/Modal";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import {
-  CheckInForm,
-  type CheckInFormValues,
-} from "@/components/forms/CheckInForm";
-import {
-  useAttendances,
-  useCheckIn,
-  useCheckOut,
-} from "@/hooks/useAttendances";
+import { CheckInForm, type CheckInFormValues } from "@/components/forms/CheckInForm";
+import { useAttendances, useCheckIn, useCheckOut } from "@/hooks/useAttendances";
 import { useEmployees } from "@/hooks/useEmployees";
 import type { AttendanceResponse } from "@/types/api";
 
@@ -26,17 +19,14 @@ function formatTime(value: string | null): string {
 
 export function AttendancesPage() {
   const [dateFilter, setDateFilter] = useState<string>("");
-  const { data, isLoading, isError, error, refetch } = useAttendances(
-    dateFilter || undefined,
-  );
+  const { data, isLoading, isError, error, refetch } = useAttendances(dateFilter || undefined);
   const { data: employees } = useEmployees();
   const checkInMut = useCheckIn();
   const checkOutMut = useCheckOut();
 
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkInError, setCheckInError] = useState<string>();
-  const [checkOutTarget, setCheckOutTarget] =
-    useState<AttendanceResponse | null>(null);
+  const [checkOutTarget, setCheckOutTarget] = useState<AttendanceResponse | null>(null);
   const [checkOutTime, setCheckOutTime] = useState("18:00");
 
   const handleCheckIn = (values: CheckInFormValues) => {
@@ -49,8 +39,7 @@ export function AttendancesPage() {
       },
       {
         onSuccess: () => setCheckInOpen(false),
-        onError: (e) =>
-          setCheckInError(e instanceof Error ? e.message : "등록 실패"),
+        onError: (e) => setCheckInError(e instanceof Error ? e.message : "등록 실패"),
       },
     );
   };
@@ -125,16 +114,10 @@ export function AttendancesPage() {
 
       {isLoading && <Spinner />}
       {isError && <ErrorState error={error} onRetry={() => refetch()} />}
-      {data && (
-        <DataTable columns={columns} rows={data} rowKey={(a) => a.id} />
-      )}
+      {data && <DataTable columns={columns} rows={data} rowKey={(a) => a.id} />}
 
       {/* 출근 등록 */}
-      <Modal
-        open={checkInOpen}
-        title="출근 등록"
-        onClose={() => setCheckInOpen(false)}
-      >
+      <Modal open={checkInOpen} title="출근 등록" onClose={() => setCheckInOpen(false)}>
         <CheckInForm
           employees={employees ?? []}
           submitting={checkInMut.isPending}

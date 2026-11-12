@@ -55,10 +55,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader
-        title="대시보드"
-        description="인사·근태 현황을 한눈에 확인합니다."
-      />
+      <PageHeader title="대시보드" description="인사·근태 현황을 한눈에 확인합니다." />
       <div className={styles.grid}>
         {cards.map((card) => (
           <button
@@ -68,9 +65,7 @@ export function DashboardPage() {
             onClick={() => navigate(card.to)}
           >
             <span className={styles.cardLabel}>{card.label}</span>
-            <span className={styles.cardValue}>
-              {card.loading ? "..." : (card.value ?? "-")}
-            </span>
+            <span className={styles.cardValue}>{card.loading ? "..." : (card.value ?? "-")}</span>
           </button>
         ))}
       </div>

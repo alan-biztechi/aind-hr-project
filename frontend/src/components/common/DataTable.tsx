@@ -33,10 +33,7 @@ export function DataTable<T>({
         <thead>
           <tr>
             {columns.map((col) => (
-              <th
-                key={col.key}
-                style={col.width ? { width: col.width } : undefined}
-              >
+              <th key={col.key} style={col.width ? { width: col.width } : undefined}>
                 {col.header}
               </th>
             ))}

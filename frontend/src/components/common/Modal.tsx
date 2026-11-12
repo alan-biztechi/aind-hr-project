@@ -33,12 +33,7 @@ export function Modal({ open, title, onClose, children, footer }: ModalProps) {
       >
         <header className={styles.header}>
           <h2 className={styles.title}>{title}</h2>
-          <button
-            type="button"
-            className={styles.close}
-            onClick={onClose}
-            aria-label="닫기"
-          >
+          <button type="button" className={styles.close} onClick={onClose} aria-label="닫기">
             ×
           </button>
         </header>

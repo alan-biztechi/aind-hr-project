@@ -8,10 +8,7 @@ import type { Column } from "@/components/common/DataTable";
 import { Modal } from "@/components/common/Modal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import {
-  EmployeeForm,
-  type EmployeeFormValues,
-} from "@/components/forms/EmployeeForm";
+import { EmployeeForm, type EmployeeFormValues } from "@/components/forms/EmployeeForm";
 import {
   useCreateEmployee,
   useDeleteEmployee,
@@ -62,10 +59,7 @@ export function EmployeesPage() {
       setFormError(e instanceof Error ? e.message : "저장에 실패했습니다.");
 
     if (editing) {
-      updateMut.mutate(
-        { id: editing.id, ...base, status: values.status },
-        { onSuccess, onError },
-      );
+      updateMut.mutate({ id: editing.id, ...base, status: values.status }, { onSuccess, onError });
     } else {
       createMut.mutate(base, { onSuccess, onError });
     }
@@ -137,9 +131,7 @@ export function EmployeesPage() {
         <select
           id="dept-filter"
           value={deptFilter ?? ""}
-          onChange={(e) =>
-            setDeptFilter(e.target.value ? Number(e.target.value) : undefined)
-          }
+          onChange={(e) => setDeptFilter(e.target.value ? Number(e.target.value) : undefined)}
         >
           <option value="">전체</option>
           {departments?.map((d) => (
@@ -178,11 +170,7 @@ export function EmployeesPage() {
       </Modal>
 
       {/* 상세 보기 */}
-      <Modal
-        open={detail !== null}
-        title="직원 상세"
-        onClose={() => setDetail(null)}
-      >
+      <Modal open={detail !== null} title="직원 상세" onClose={() => setDetail(null)}>
         {detail && (
           <dl style={{ margin: 0, display: "grid", gap: "0.6rem" }}>
             <DetailRow label="이름" value={detail.name} />
@@ -191,10 +179,7 @@ export function EmployeesPage() {
             <DetailRow label="부서" value={detail.departmentName} />
             <DetailRow label="직급" value={detail.position} />
             <DetailRow label="입사일" value={detail.hireDate} />
-            <DetailRow
-              label="상태"
-              value={<StatusBadge kind="employee" value={detail.status} />}
-            />
+            <DetailRow label="상태" value={<StatusBadge kind="employee" value={detail.status} />} />
           </dl>
         )}
       </Modal>
@@ -212,18 +197,10 @@ export function EmployeesPage() {
   );
 }
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div style={{ display: "flex", gap: "0.8rem" }}>
-      <dt style={{ width: "80px", color: "var(--color-text-muted)", margin: 0 }}>
-        {label}
-      </dt>
+      <dt style={{ width: "80px", color: "var(--color-text-muted)", margin: 0 }}>{label}</dt>
       <dd style={{ margin: 0 }}>{value}</dd>
     </div>
   );

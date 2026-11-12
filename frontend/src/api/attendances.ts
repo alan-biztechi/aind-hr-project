@@ -1,9 +1,5 @@
 import { apiClient } from "@/api/client";
-import type {
-  AttendanceCheckInRequest,
-  AttendanceResponse,
-  UpdateResponse,
-} from "@/types/api";
+import type { AttendanceCheckInRequest, AttendanceResponse, UpdateResponse } from "@/types/api";
 
 const BASE = "/v1/attendances";
 
@@ -15,19 +11,12 @@ export async function getAttendances(): Promise<AttendanceResponse[]> {
 export async function getAttendancesByDate(
   workDate: string, // yyyy-MM-dd
 ): Promise<AttendanceResponse[]> {
-  const { data } = await apiClient.get<AttendanceResponse[]>(
-    `${BASE}/date/${workDate}`,
-  );
+  const { data } = await apiClient.get<AttendanceResponse[]>(`${BASE}/date/${workDate}`);
   return data;
 }
 
-export async function checkIn(
-  body: AttendanceCheckInRequest,
-): Promise<UpdateResponse> {
-  const { data } = await apiClient.post<UpdateResponse>(
-    `${BASE}/check-in`,
-    body,
-  );
+export async function checkIn(body: AttendanceCheckInRequest): Promise<UpdateResponse> {
+  const { data } = await apiClient.post<UpdateResponse>(`${BASE}/check-in`, body);
   return data;
 }
 
@@ -39,10 +28,8 @@ export async function checkOut(
   id: number,
   checkOutTime: string, // HH:mm
 ): Promise<UpdateResponse> {
-  const { data } = await apiClient.patch<UpdateResponse>(
-    `${BASE}/${id}/check-out`,
-    null,
-    { params: { checkOut: checkOutTime } },
-  );
+  const { data } = await apiClient.patch<UpdateResponse>(`${BASE}/${id}/check-out`, null, {
+    params: { checkOut: checkOutTime },
+  });
   return data;
 }

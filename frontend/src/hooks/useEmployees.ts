@@ -12,13 +12,8 @@ const EMPLOYEES_KEY = ["employees"] as const;
 export function useEmployees(departmentId?: number) {
   return useQuery({
     queryKey:
-      departmentId != null
-        ? ([...EMPLOYEES_KEY, { departmentId }] as const)
-        : EMPLOYEES_KEY,
-    queryFn: () =>
-      departmentId != null
-        ? getEmployeesByDepartment(departmentId)
-        : getEmployees(),
+      departmentId != null ? ([...EMPLOYEES_KEY, { departmentId }] as const) : EMPLOYEES_KEY,
+    queryFn: () => (departmentId != null ? getEmployeesByDepartment(departmentId) : getEmployees()),
   });
 }
 

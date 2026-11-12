@@ -44,10 +44,7 @@ export function CheckInForm({
 
       <div className="field">
         <label htmlFor="ci-emp">직원 *</label>
-        <select
-          id="ci-emp"
-          {...register("employeeId", { required: "직원은 필수입니다." })}
-        >
+        <select id="ci-emp" {...register("employeeId", { required: "직원은 필수입니다." })}>
           <option value="">선택하세요</option>
           {employees.map((e) => (
             <option key={e.id} value={e.id}>
@@ -55,9 +52,7 @@ export function CheckInForm({
             </option>
           ))}
         </select>
-        {errors.employeeId && (
-          <span className="field-error">{errors.employeeId.message}</span>
-        )}
+        {errors.employeeId && <span className="field-error">{errors.employeeId.message}</span>}
       </div>
 
       <div className="field">
@@ -67,9 +62,7 @@ export function CheckInForm({
           type="date"
           {...register("workDate", { required: "근무일은 필수입니다." })}
         />
-        {errors.workDate && (
-          <span className="field-error">{errors.workDate.message}</span>
-        )}
+        {errors.workDate && <span className="field-error">{errors.workDate.message}</span>}
       </div>
 
       <div className="field">
@@ -79,18 +72,11 @@ export function CheckInForm({
           type="time"
           {...register("checkIn", { required: "출근 시각은 필수입니다." })}
         />
-        {errors.checkIn && (
-          <span className="field-error">{errors.checkIn.message}</span>
-        )}
+        {errors.checkIn && <span className="field-error">{errors.checkIn.message}</span>}
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={onCancel}
-          disabled={submitting}
-        >
+        <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={submitting}>
           취소
         </button>
         <button type="submit" className="btn btn-primary" disabled={submitting}>

@@ -20,9 +20,7 @@ export function PageHeader({ title, description, action }: PageHeaderProps) {
       <div>
         <h1 style={{ fontSize: "1.5rem" }}>{title}</h1>
         {description && (
-          <p style={{ margin: 0, color: "var(--color-text-muted)" }}>
-            {description}
-          </p>
+          <p style={{ margin: 0, color: "var(--color-text-muted)" }}>{description}</p>
         )}
       </div>
       {action}

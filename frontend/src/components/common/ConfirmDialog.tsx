@@ -28,20 +28,10 @@ export function ConfirmDialog({
       onClose={onCancel}
       footer={
         <>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={onCancel}
-            disabled={loading}
-          >
+          <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={loading}>
             {cancelLabel}
           </button>
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={onConfirm}
-            disabled={loading}
-          >
+          <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={loading}>
             {loading ? "처리 중..." : confirmLabel}
           </button>
         </>

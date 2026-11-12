@@ -18,25 +18,17 @@ export async function getEmployee(id: number): Promise<EmployeeResponse> {
   return data;
 }
 
-export async function getEmployeesByDepartment(
-  departmentId: number,
-): Promise<EmployeeResponse[]> {
-  const { data } = await apiClient.get<EmployeeResponse[]>(
-    `${BASE}/department/${departmentId}`,
-  );
+export async function getEmployeesByDepartment(departmentId: number): Promise<EmployeeResponse[]> {
+  const { data } = await apiClient.get<EmployeeResponse[]>(`${BASE}/department/${departmentId}`);
   return data;
 }
 
-export async function createEmployee(
-  body: EmployeeCreateRequest,
-): Promise<UpdateResponse> {
+export async function createEmployee(body: EmployeeCreateRequest): Promise<UpdateResponse> {
   const { data } = await apiClient.post<UpdateResponse>(BASE, body);
   return data;
 }
 
-export async function updateEmployee(
-  body: EmployeeUpdateRequest,
-): Promise<UpdateResponse> {
+export async function updateEmployee(body: EmployeeUpdateRequest): Promise<UpdateResponse> {
   const { data } = await apiClient.put<UpdateResponse>(BASE, body);
   return data;
 }

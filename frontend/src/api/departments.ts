@@ -18,16 +18,12 @@ export async function getDepartment(id: number): Promise<Department> {
   return data;
 }
 
-export async function createDepartment(
-  body: DepartmentCreateRequest,
-): Promise<UpdateResponse> {
+export async function createDepartment(body: DepartmentCreateRequest): Promise<UpdateResponse> {
   const { data } = await apiClient.post<UpdateResponse>(BASE, body);
   return data;
 }
 
-export async function updateDepartment(
-  body: DepartmentUpdateRequest,
-): Promise<UpdateResponse> {
+export async function updateDepartment(body: DepartmentUpdateRequest): Promise<UpdateResponse> {
   const { data } = await apiClient.put<UpdateResponse>(BASE, body);
   return data;
 }

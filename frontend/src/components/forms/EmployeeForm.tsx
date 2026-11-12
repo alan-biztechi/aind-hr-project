@@ -51,10 +51,7 @@ export function EmployeeForm({
 
       <div className="field">
         <label htmlFor="emp-name">이름 *</label>
-        <input
-          id="emp-name"
-          {...register("name", { required: "이름은 필수입니다." })}
-        />
+        <input id="emp-name" {...register("name", { required: "이름은 필수입니다." })} />
         {errors.name && <span className="field-error">{errors.name.message}</span>}
       </div>
 
@@ -71,9 +68,7 @@ export function EmployeeForm({
             },
           })}
         />
-        {errors.email && (
-          <span className="field-error">{errors.email.message}</span>
-        )}
+        {errors.email && <span className="field-error">{errors.email.message}</span>}
       </div>
 
       <div className="field">
@@ -83,10 +78,7 @@ export function EmployeeForm({
 
       <div className="field">
         <label htmlFor="emp-dept">부서 *</label>
-        <select
-          id="emp-dept"
-          {...register("departmentId", { required: "부서는 필수입니다." })}
-        >
+        <select id="emp-dept" {...register("departmentId", { required: "부서는 필수입니다." })}>
           <option value="">선택하세요</option>
           {departments.map((d) => (
             <option key={d.id} value={d.id}>
@@ -94,9 +86,7 @@ export function EmployeeForm({
             </option>
           ))}
         </select>
-        {errors.departmentId && (
-          <span className="field-error">{errors.departmentId.message}</span>
-        )}
+        {errors.departmentId && <span className="field-error">{errors.departmentId.message}</span>}
       </div>
 
       <div className="field">
@@ -106,9 +96,7 @@ export function EmployeeForm({
           placeholder="사원/대리/과장/차장/부장"
           {...register("position", { required: "직급은 필수입니다." })}
         />
-        {errors.position && (
-          <span className="field-error">{errors.position.message}</span>
-        )}
+        {errors.position && <span className="field-error">{errors.position.message}</span>}
       </div>
 
       <div className="field">
@@ -118,9 +106,7 @@ export function EmployeeForm({
           type="date"
           {...register("hireDate", { required: "입사일은 필수입니다." })}
         />
-        {errors.hireDate && (
-          <span className="field-error">{errors.hireDate.message}</span>
-        )}
+        {errors.hireDate && <span className="field-error">{errors.hireDate.message}</span>}
       </div>
 
       {isEdit && (
@@ -134,12 +120,7 @@ export function EmployeeForm({
       )}
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={onCancel}
-          disabled={submitting}
-        >
+        <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={submitting}>
           취소
         </button>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
