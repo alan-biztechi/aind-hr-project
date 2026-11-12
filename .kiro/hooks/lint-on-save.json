@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Lint on save (frontend)",
+      "trigger": "PostFileSave",
+      "description": "Kiro가 frontend/src의 TS/TSX 파일을 저장하면 ESLint 자동 수정을 실행하고, 고칠 수 없는 오류가 남으면 Kiro에게 알린다.",
+      "matcher": "frontend/src/.*\\.(ts|tsx)$",
+      "action": {
+        "type": "command",
+        "command": "cd frontend && npm run lint:fix 1>&2",
+        "timeout": 60
+      }
+    }
+  ]
+}

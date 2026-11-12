@@ -240,7 +240,7 @@ PR 준비를 위한 전체 워크플로를 시작합니다:
 | 내가 편집기에서 고쳤는데 훅이 안 돎 | 파일 훅은 **Kiro가** 저장할 때만 실행 | Kiro에게 수정을 요청 |
 | `npm: command not found` | 훅 환경 PATH에 Node 경로가 없음 | 2절 확인 명령 → `~/.zshenv`에 `which npm` 폴더 추가 |
 | `eslint: command not found` / 모듈 없음 | `frontend/`에서 `npm install`을 안 함 | `cd frontend && npm install` |
-| 다른 폴더 파일에도 훅이 돎 / 아예 안 돎 | `matcher` 정규식이 다름 | 1절 JSON의 `matcher`와 같은지 확인 (JSON에서는 `.`을 `\\.`로 씀) |
+| 다른 폴더 파일에도 훅이 돎 / 아예 안 돎 | `matcher` 정규식이 다름 | 1절 JSON의 `matcher`와 같은지 확인 (JSON 파일에서는 `.` 앞의 역슬래시를 두 번 씀) |
 | 훅을 고친 뒤 Agent Hooks에서 사라짐 | JSON 문법이 깨짐 | 1절 JSON과 비교해 쉼표·따옴표 확인 |
 | 훅이 오래 걸려 끊김 | `timeout`(60초) 초과 | `timeout` 값을 늘리거나, 검사 범위를 줄임 |
 | (선택) `/pr-workflow`가 목록에 없음 | 파일 위치·이름이나 front-matter(`inclusion: manual`)가 다름 | `.kiro/steering/pr-workflow.md`와 첫 3줄 확인 |
