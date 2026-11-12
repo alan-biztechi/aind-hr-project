@@ -36,7 +36,6 @@ kiro-cli agent list
 ```
 
 **기대 결과**: `sa-orchestrator` + 서브에이전트 5개(리뷰어 4 + `risk-aggregator`)가 모두 Workspace 항목에 **`(v3 format)`** 표시와 함께 보임.
-(`sa-reviewer.md` 같은 Markdown 에이전트는 CLI 2.35.1의 `agent list`에 표시되지 않음 — IDE용)
 
 **실패 시 의미**
 - 일부만 보이거나 안 보임 → 로딩 스킵됨. 보통 스키마(permissions 누락) 문제.

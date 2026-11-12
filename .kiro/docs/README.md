@@ -106,7 +106,6 @@ Architecture Review Report를 생성합니다.
   `toolsSettings`/`allowedTools`를 읽으므로, V3 전용 설정은 V2로 실행하면 의도대로 동작하지 않습니다.
 - 구버전(2.x) 형식(`toolsSettings`+`allowedTools`)이 남은 에이전트는 `/upgrade-agent`로 변환할 수 있습니다.
   변환 결과는 V2와 V3를 모두 읽는 "universal" 형식(`(v3 format)` 표시 없음)입니다.
-- `sa-reviewer.md`처럼 Markdown 형식 에이전트는 IDE에서 사용하며, Kiro CLI 2.35.1의 `agent list`에는 표시되지 않습니다.
 - IDE에서 서브에이전트/병렬 실행은 Autopilot 모드에서 동작합니다.
 
 ## 검증 방법

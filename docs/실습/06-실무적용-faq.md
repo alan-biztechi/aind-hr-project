@@ -34,7 +34,6 @@
 │   ├── api-reviewer.json
 │   ├── db-reviewer.json
 │   ├── risk-aggregator.json
-│   └── sa-reviewer.md           # 단일 아키텍트 리뷰어 (위 파이프라인과 별개)
 ├── docs/              # 검증 가이드·스크립트
 │   ├── TESTING.md               # 오케스트레이터 검증 + 정답지
 │   └── validate_agents.py       # 에이전트 정적 검증
