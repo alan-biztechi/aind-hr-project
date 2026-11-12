@@ -8,15 +8,15 @@ AIND HR 백엔드(Spring Boot, `/v1/*` REST API)를 사용하는 React 관리자
 버전은 npm 공식 레지스트리의 안정 릴리스를 기준으로 고정했습니다. TypeScript만 생태계 호환을 고려해
 `latest`(7.x) 대신 검증된 5.9를 사용합니다.
 
-| 영역 | 패키지 | 버전 |
-|------|--------|------|
-| 빌드 | Vite | ^8.3.5 |
-| React | react / react-dom | ^19.3.1 |
-| 라우팅 | react-router-dom | ^7.18.4 |
+| 영역      | 패키지                | 버전     |
+| --------- | --------------------- | -------- |
+| 빌드      | Vite                  | ^8.3.5   |
+| React     | react / react-dom     | ^19.3.1  |
+| 라우팅    | react-router-dom      | ^7.18.4  |
 | 서버 상태 | @tanstack/react-query | ^5.104.5 |
-| HTTP | axios | ^1.20.0 |
-| 폼 | react-hook-form | ^7.90.0 |
-| 언어 | typescript | ~5.9.3 |
+| HTTP      | axios                 | ^1.20.0  |
+| 폼        | react-hook-form       | ^7.90.0  |
+| 언어      | typescript            | ~5.9.3   |
 
 ## 사전 준비
 
@@ -54,19 +54,19 @@ Vite dev 서버가 `/v1/*` 요청을 `http://localhost:8080`으로 프록시하�
 
 `.env.example`을 복사해 `.env`를 만들어 설정합니다.
 
-| 변수 | 기본값 | 설명 |
-|------|--------|------|
-| `VITE_API_BASE_URL` | (빈 값) | API 베이스 URL. 비워 두면 dev 프록시(상대 경로 `/v1`)를 사용. 프로덕션 배포 시 실제 호스트 지정 |
-| `VITE_PROXY_TARGET` | `http://localhost:8080` | dev 프록시가 가리킬 백엔드 주소 |
+| 변수                | 기본값                  | 설명                                                                                            |
+| ------------------- | ----------------------- | ----------------------------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL` | (빈 값)                 | API 베이스 URL. 비워 두면 dev 프록시(상대 경로 `/v1`)를 사용. 프로덕션 배포 시 실제 호스트 지정 |
+| `VITE_PROXY_TARGET` | `http://localhost:8080` | dev 프록시가 가리킬 백엔드 주소                                                                 |
 
 ## 스크립트
 
-| 명령 | 설명 |
-|------|------|
-| `npm run dev` | 개발 서버 (HMR) |
-| `npm run build` | 타입 체크(`tsc --noEmit`) 후 프로덕션 빌드 |
-| `npm run typecheck` | 타입 체크만 수행 |
-| `npm run preview` | 빌드 결과 미리보기 |
+| 명령                | 설명                                       |
+| ------------------- | ------------------------------------------ |
+| `npm run dev`       | 개발 서버 (HMR)                            |
+| `npm run build`     | 타입 체크(`tsc --noEmit`) 후 프로덕션 빌드 |
+| `npm run typecheck` | 타입 체크만 수행                           |
+| `npm run preview`   | 빌드 결과 미리보기                         |
 
 ## 폴더 구조
 
