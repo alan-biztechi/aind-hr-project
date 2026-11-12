@@ -30,7 +30,7 @@ SA 오케스트레이터는 이런 커스텀 에이전트 여러 개를 묶은 �
 | 필드 | 뜻 |
 |------|-----|
 | `description` | 무슨 일을 하는 에이전트인지 |
-| `prompt` | 역할, 점검 항목(12개), 분류(필수 수정·권장·참고), 반환 형식 |
+| `prompt` | 역할, 점검 항목(처음엔 12개), 분류(필수 수정·권장·참고), 반환 형식 |
 | `tools` | **어떤 도구가 보이는가** (`read`, `write`, `shell`, `subagent/<이름>`) |
 | `resources` | 시작할 때 함께 읽는 파일. 여기서는 실습 ①의 Steering 규칙 |
 | `permissions` | **그 도구로 무엇을 해도 되는가**. 읽기 명령만 허용하고 `fs_write`는 `deny` |
@@ -43,7 +43,7 @@ kiro-cli agent list   # code-reviewer 가 (v3 format) 으로 보이면 정상
 
 **에이전트 전환**
 - IDE: 채팅 입력창 하단의 에이전트 드롭다운 → `code-reviewer`
-- CLI: `kiro-cli chat --v3 --agent code-reviewer` (이 저장소의 에이전트는 V3 전용이라 `--v3`가 없으면 권한 설정이 적용되지 않습니다)
+- CLI: `kiro-cli chat --v3 --agent code-reviewer` (이 저장소의 에이전트는 V3 형식입니다. `--v3`를 붙이면 기본 엔진 설정과 관계없이 V3로 실행됩니다)
 
 `code-reviewer`로 전환하고 입력:
 
@@ -51,9 +51,9 @@ kiro-cli agent list   # code-reviewer 가 (v3 format) 으로 보이면 정상
 src/main/java/com/aind/hr/service/EmployeeService.java 파일만 점검해줘.
 ```
 
-**기대 결과**: 6번 항목(광범위한 `catch (Exception e)`) 위반이 나옵니다. `createEmployee`의 `catch (Exception e)`가 모든 예외를 "등록 실패"로 뭉갭니다. 7번(`@Transactional` 없음)도 지적될 수 있습니다.
+**기대 결과**: 6번 항목(광범위한 `catch (Exception e)`) 위반이 나옵니다. `createEmployee`(44행)의 `catch (Exception e)`가 모든 예외를 "등록 실패"로 뭉갭니다. 모델에 따라 7번(`@Transactional`)이 지적될 수도 있지만, 이 파일의 쓰기 메서드는 각각 한 번만 쓰므로 6번이 핵심입니다.
 
-> 💡 "그럼 바로 고쳐줘"라고 해 보세요. `fs_write`가 `deny`라서 `code-reviewer`는 파일을 고칠 수 없습니다. 역할이 **권한으로** 강제되는 것을 확인할 수 있습니다.
+> 💡 "그럼 바로 고쳐줘"라고 해 보세요. `code-reviewer`는 쓰기 도구(`write`)가 없고 `fs_write`도 `deny`라서 파일을 고칠 수 없습니다. 거절하거나 수정 방법만 설명하는 답이 나옵니다. 끝난 뒤 `git status`에 변경 파일이 없으면 권한이 지켜진 것입니다.
 
 ### 1-3. 직접 고쳐 보기
 
@@ -67,7 +67,7 @@ src/main/java/com/aind/hr/service/EmployeeService.java 파일만 점검해줘.
 
 > ⚠️ `prompt`는 JSON 문자열 한 줄이라 줄바꿈을 `\n`으로 씁니다. 엔터로 줄을 바꾸면 JSON이 깨집니다.
 
-저장한 뒤 **새 대화**에서 `code-reviewer`로 같은 요청을 다시 보냅니다. 결과 표에 **13번 위반**이 새로 나오면 성공입니다. 이 프로젝트의 서비스 코드에는 로그 코드가 없어서, `EmployeeService`의 `catch` 블록(44행 근처)이 지적됩니다.
+저장한 뒤 **새 대화**에서 `code-reviewer`로 같은 요청을 다시 보냅니다. 결과 표에 **13번 위반**이 새로 나오면 성공입니다. 이 프로젝트의 서비스 코드에는 로그 코드가 전혀 없어서, `EmployeeService`의 `catch` 블록(44행)이 지적됩니다.
 
 > 💡 프롬프트 한 줄을 바꿨더니 에이전트의 점검 기준이 바뀌었습니다. SA 오케스트레이터의 리뷰어들도 같은 방식으로 관점을 조정합니다.
 
@@ -92,7 +92,8 @@ python3 .kiro/docs/validate_agents.py   # PROBLEMS: (none) 이면 원상복구 �
 ### 1-4. 하나에서 여럿으로
 
 SA 오케스트레이터는 방금 다룬 것과 같은 구조의 커스텀 에이전트 6개로 되어 있습니다.
-- **리뷰어 4개**(`architecture-` `infra-` `api-` `db-reviewer`)와 **`risk-aggregator`**: `code-reviewer`처럼 한 가지 관점만 보는 읽기 전용 에이전트
+- **리뷰어 4개**(`architecture-` `infra-` `api-` `db-reviewer`): `code-reviewer`처럼 한 가지 관점만 보는 읽기 전용 에이전트 (`tools`: `read`, `shell`)
+- **`risk-aggregator`**: 리뷰어들의 결과를 받아 합치기만 하는 읽기 전용 에이전트 (`tools`: `read`만)
 - **`sa-orchestrator`**: 위 5개를 서브에이전트로 묶은 에이전트. `code-reviewer`와 비교해 두 가지가 다릅니다.
   - `tools`에 `subagent/architecture-reviewer` 등 5개가 있어 **이 5개만** 서브에이전트로 띄울 수 있습니다. 수정 ②에서 고친 바로 그 부분입니다.
   - `permissions`의 `fs_write`가 `.kiro/reports/**`에만 허용돼 리포트만 쓸 수 있습니다.
@@ -132,7 +133,7 @@ sa-orchestrator
 | 쓰임 | 실습, 일상 점검 | 큰 설계 변경처럼 깊게 볼 때 |
 
 - 서브에이전트 5개(리뷰어 4 + `risk-aggregator`)는 **읽기 전용**입니다. 쓰기는 오케스트레이터가 `.kiro/reports/`에만 합니다.
-- 판정 기준: Critical이 1개라도 있으면 NO-GO, High가 있으면 CONDITIONAL GO, 그 외 GO
+- 판정 기준: Critical이 1개라도 있으면 NO-GO, Critical 없이 High가 있으면 CONDITIONAL GO, Medium 이하만 있으면 GO
 
 ---
 
@@ -155,7 +156,7 @@ kiro-cli agent list                     # sa-orchestrator 와 서브에이전트
 .kiro/reports/architecture-review-20261023-142313.md
 ```
 
-전체 시스템을 대상으로 만든 리포트입니다. 판정은 **NO-GO**, 통합 리스크는 25건입니다. 개수 제한이 없던 이전 설정에서 순차 방식으로 만든 것이라, 지금 기본값(빠른 모드, 통합 최대 10개)으로 실행하면 더 짧은 리포트가 나옵니다.
+전체 시스템을 대상으로 만든 리포트입니다. 판정은 **NO-GO**, 통합 리스크는 25건입니다. 개수 제한을 넣기 전 설정으로 만든 리포트라, 지금 기본값(빠른 모드, 통합 최대 10개)으로 실행하면 더 짧은 리포트가 나옵니다.
 
 ### 정답지
 
@@ -170,12 +171,12 @@ kiro-cli agent list                     # sa-orchestrator 와 서브에이전트
 | 3 | `AttendanceService.getAttendanceByDate`의 N+1 쿼리 | 반복문 안에서 `employeeRepository.selectById` 호출 |
 | 4 | 광범위한 `catch (Exception e)` | `grep -rn "catch (Exception" src/main/java` → 3곳 |
 
-**나오면 안 됨** (나오면 환각)
+**나오면 안 됨** (그대로 나오면 환각)
 
 | 지적 | 왜 틀렸나 |
 |------|-----------|
 | 매퍼 XML의 `${}` SQL 인젝션 | 전 매퍼가 `#{}`만 사용. `${}` 없음 |
-| 입력 검증 전무 | 생성·수정 컨트롤러 4곳에 `@Valid` 적용됨 |
+| 입력 검증 전무 | 컨트롤러 4개에 `@Valid` 6곳 적용됨 (`grep -rn "@Valid" src/main/java`) |
 
 ### 대조 명령
 
@@ -194,6 +195,10 @@ grep -n '\${' $R        # '사용 0건' 확인 문장이어야 함 (지적이면
 
 리포트는 RISK-5를 "테스트 설정이 **운영 DB**를 가리킨다"는 이유로 Critical로 분류합니다. 설정의 접속 주소는 `localhost`입니다. `.kiro/steering/security-rules.md`의 "프로덕션" 정의와 대조하면, 이 전제는 맞을까요?
 
+> 💡 **판단 근거 (풀어 본 뒤 읽기)**: `security-rules.md`는 로컬 MySQL을 프로덕션이 **아니라고** 정의합니다. 코드와 설정에서 이 DB가 운영 DB라는 근거는 찾을 수 없으므로 "운영 데이터 파괴"라는 전제는 확인되지 않은 가정입니다. 다만 앱 설정과 테스트 설정이 **같은 DB**를 쓰고 `schema.sql`에 `DROP TABLE`이 있다는 사실은 맞으니, "로컬 개발 데이터가 지워질 수 있다"는 수준의 리스크로 다시 보는 것이 맞습니다.
+
+> 💡 샘플 리포트에는 "입력검증 부재"(RISK-16)라는 표현이 나옵니다. 내용을 읽어 보면 `@Valid`가 없다는 뜻이 아니라 enum·형식 같은 **세부 값 검증이 없다**는 지적이라, 정답지의 "입력 검증 전무"와는 다릅니다. 이렇게 표현이 비슷해도 **내용을 읽고** 판단하세요.
+>
 > 💡 정답지에 없는 지적은 **근거를 직접 확인**하세요. 리포트가 그럴듯해도 확인되지 않은 전제가 섞일 수 있습니다.
 
 ---
@@ -211,7 +216,7 @@ grep -n '\${' $R        # '사용 0건' 확인 문장이어야 함 (지적이면
 | 오케스트레이터는 소스를 직접 읽지 않음 | 중복 읽기 |
 | 리뷰어당 findings **최대 5개**, 통합 리스크 **최대 10개**, 리포트 **간결 형식** | 생성하는 글의 양 |
 | 앞 단계 결과는 **요약**으로만 전달 (순차 모드) | 입력이 불어나는 것 |
-| 서브에이전트가 쓰는 명령이 모두 미리 허용돼 있음 | 승인 대기 |
+| 리뷰어가 쓰는 읽기 명령(`ls`, `grep`, `cat` 등)이 오케스트레이터에도 허용돼 있음 | 승인 대기 |
 
 여기에 **요청 범위를 좁히면** 효과가 가장 큽니다.
 
@@ -228,9 +233,9 @@ grep -n '\${' $R        # '사용 0건' 확인 문장이어야 함 (지적이면
    ```bash
    ls -lt .kiro/reports/ | head -3
    ```
-4. 4절과 같은 방법으로 정답지와 대조합니다. 범위를 좁혔으므로 정답지 2·3·4번(트랜잭션, N+1, 광범위 catch)이 나오면 충분합니다. 1번(설정 파일)은 범위 밖이라 안 나와도 정상입니다.
+4. 4절과 같은 방법으로 정답지와 대조합니다. 범위를 좁혔으므로 정답지 2·3·4번이 **`AttendanceService` 기준으로**(트랜잭션 없음, `getAttendanceByDate`의 N+1, `checkIn`의 광범위 catch) 나오면 충분합니다. 1번(설정 파일)은 범위 밖이라 안 나와도 정상입니다.
 
-> 💡 위 범위에는 설정 파일이 없어서 `infra-reviewer`는 `해당 없음`으로 바로 끝나는 것이 정상입니다.
+> 💡 위 범위에는 설정 파일이 없어서 `infra-reviewer`는 `해당 없음`으로 짧게 끝날 가능성이 큽니다. 다만 커넥션 사용 같은 관점으로 몇 가지를 지적할 수도 있고, 그것도 정상입니다.
 
 > ⚠️ **오래 걸리는 요청**: `HR 시스템 전체 아키텍처 리뷰해줘`(리뷰어마다 백엔드 전체를 읽음), 요청에 "순차 모드"(차례 4번), "전체 모드"(개수 제한과 요약 전달 해제)를 넣는 경우입니다. 꼭 필요할 때만 쓰세요.
 
@@ -257,10 +262,10 @@ grep -n '\${' $R        # '사용 0건' 확인 문장이어야 함 (지적이면
 
 | 증상 | 원인 | 해결 |
 |------|------|------|
-| 수정 후 `code-reviewer`가 목록에서 사라짐 | `prompt`에 엔터로 줄을 바꿔 JSON이 깨짐 | `kiro-cli agent validate --path .kiro/agents/code-reviewer.json`으로 오류 위치 확인, 줄바꿈은 `\\n`으로 |
+| 수정 후 `code-reviewer`가 동작하지 않음 | `prompt`에 엔터로 줄을 바꿔 JSON이 깨짐 (`agent list`에는 계속 보일 수 있음) | `kiro-cli agent validate --path .kiro/agents/code-reviewer.json`으로 오류 위치 확인, 줄바꿈은 `\n`으로 |
 | 13번이 결과에 안 나옴 | 이전 대화를 이어서 요청함 | 새 대화에서 다시 요청 |
 | 서브에이전트가 안 뜸 | 메인 전환 안 함, IDE가 Supervised 모드, CLI를 `--v3` 없이 실행 | `sa-orchestrator`로 전환, Autopilot, `--v3` |
-| 호출마다 승인창 반복 | `permissions`의 `subagent` 규칙 미적용 (V2 하네스) | `--v3`로 실행. 급하면 수동 승인 |
+| 호출마다 승인창 반복 | V2 엔진으로 실행돼 `permissions` 규칙이 적용 안 됨 | `--v3`로 실행. 급하면 수동 승인 |
 | 새 리포트가 안 보임 | 실행 실패했는데 샘플 파일을 보고 있음 | `ls -lt`로 타임스탬프 확인 |
 | `agent list`에 일부 누락 | 설정 문법 오류 | `validate_agents.py`의 PROBLEMS 확인 |
 
