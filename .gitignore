@@ -32,3 +32,6 @@ target/
 /agentic-demo/TASKS.md
 /agentic-demo/RESULT.md
 /agentic-demo/web-dashboard/
+
+### Confluence 변환 결과 (scripts/md2confluence.py 로 docs/실습 에서 재생성) ###
+/docs/confluence/

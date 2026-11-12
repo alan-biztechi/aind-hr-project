@@ -1,86 +1,45 @@
 # 실습 ③. SA Orchestrator — 아키텍처 검토
 
 > **과정**: 핵심
-> **소요 시간**: 기본 약 35분 (+ 선택 약 15분)
-> **AI 요청 횟수**: 기본 1회 / 선택 +1회
+> **소요 시간**: 기본 약 45분 (+ 선택 약 15분)
+> **AI 요청 횟수**: 기본 2회 / 선택 +1회
 > **난이도**: ★★★★☆
-> **실습 목표**: 커스텀 에이전트 하나(`code-reviewer`)를 직접 만들어 보고, 멀티에이전트가 만든 아키텍처 검토 리포트를 **정답지로 검증**한다. 원하면 범위를 좁혀 직접 실행해 본다.
+> **실습 목표**: 커스텀 에이전트(`code-reviewer`)를 직접 고쳐 보며 구조를 익히고, 멀티에이전트가 만든 아키텍처 검토 리포트를 **정답지로 검증**한다. 원하면 범위를 좁혀 직접 실행해 본다.
 
 ---
 
 ## 0. 이 실습에서 배우는 것
 
-- **커스텀 에이전트**를 직접 만들고 전환하는 법 (이 과정에서 처음 다룹니다)
+- **커스텀 에이전트**를 전환하고, 직접 고쳐 결과가 달라지는 것을 확인하는 법 (이 과정에서 처음 다룹니다)
 - 메인 에이전트가 전문 에이전트들을 **서브에이전트로 조율**하는 구조
 - 리포트가 "진짜인지" **정답지로 검증**하는 법
 - 멀티에이전트를 **짧은 시간, 적은 사용량으로** 돌리는 법
 
 ---
 
-## 1. 커스텀 에이전트 하나 만들기 (code-reviewer)
+## 1. 커스텀 에이전트 다뤄 보기 (code-reviewer)
 
 커스텀 에이전트는 역할에 맞는 **프롬프트와 권한을 묶어 둔 설정 파일**입니다. 위치는 `.kiro/agents/`. 기본 에이전트에게 "코드는 바꾸지 마"라고 하는 건 부탁이지만, 커스텀 에이전트는 **권한으로** 막습니다.
 
-SA 오케스트레이터는 이런 커스텀 에이전트 여러 개를 묶은 것입니다. 먼저 하나를 직접 만들어 봅니다.
+SA 오케스트레이터는 이런 커스텀 에이전트 여러 개를 묶은 것입니다. 먼저 샘플 하나를 열어 보고, 직접 고쳐 봅니다.
 
-### 1-1. 파일 만들기 (AI 사용 없음)
+### 1-1. 샘플 열어 보기 (AI 사용 없음)
 
-프로젝트 루트에 `.kiro/agents/code-reviewer.json` 파일을 만들고 아래 내용을 그대로 붙여 넣습니다.
-
-```json
-{
-  "name": "code-reviewer",
-  "description": "코드 리뷰어. 지정한 파일을 프로젝트 표준 12개 항목으로 점검하고, 위반을 필수 수정·권장·참고 3단계로 분류한다. 읽기 전용.",
-  "prompt": "당신은 aind-hr-project의 코드 리뷰어입니다. 사용자가 지정한 파일(지정이 없으면 git diff의 변경 파일)만 점검합니다. 코드는 수정하지 않습니다.\n\n## 점검 항목 (12개)\n1. MyBatis는 #{}만 사용, ${} 없음\n2. XML id = Repository 메서드명\n3. 레이어 책임: Controller는 위임만\n4. 엔티티 대신 *Response DTO로 응답\n5. 요청 DTO 검증과 @Valid\n6. CustomException + ErrorCode 사용, 광범위한 catch (Exception e) 없음\n7. 여러 번 쓰는 작업은 @Transactional 안에 있음\n8. 목록 조회 결과 없음은 200 + 빈 배열\n9. 반복문 안 DB 호출(N+1) 없음\n10. 새 엔드포인트에 @Operation 있음\n11. 비밀정보 하드코딩 없음 (값은 쓰지 말고 키 이름과 위치만)\n12. 기존 동작 변경·새 의존성 없음\n\n## 분류\n- 필수 수정: 보안 위험, 런타임 오류, 데이터 손상 가능성\n- 권장: 동작은 하지만 표준·유지보수성을 해침\n- 참고: 현재 규모에서는 영향이 작은 개선점\n\n## 반환 형식\n| 분류 | 항목 번호 | 파일:라인 | 문제 | 권고 |\n표 아래에 12개 항목 결과를 한 줄씩(통과 / 위반 / 해당 없음) 적는다.\n\n## 규칙\n- 실제 코드에서 확인한 것만 지적한다.\n- 파일 탐색은 shell의 git diff, ls, grep, cat만 사용한다.\n- 한국어로 답한다.",
-  "tools": [
-    "read",
-    "shell"
-  ],
-  "resources": [
-    "file://.kiro/steering/**/*.md"
-  ],
-  "permissions": {
-    "rules": [
-      {
-        "capability": "fs_read",
-        "effect": "allow"
-      },
-      {
-        "capability": "shell",
-        "match": [
-          "git diff*",
-          "git status*",
-          "ls *",
-          "grep *",
-          "cat *"
-        ],
-        "effect": "allow"
-      },
-      {
-        "capability": "fs_write",
-        "effect": "deny"
-      }
-    ]
-  }
-}
-```
+`.kiro/agents/code-reviewer.json`을 엽니다. 지정한 파일을 12개 항목으로 점검하는 읽기 전용 리뷰어입니다.
 
 | 필드 | 뜻 |
 |------|-----|
 | `description` | 무슨 일을 하는 에이전트인지 |
-| `prompt` | 역할, 점검 항목, 반환 형식, 규칙 |
+| `prompt` | 역할, 점검 항목(12개), 분류(필수 수정·권장·참고), 반환 형식 |
 | `tools` | **어떤 도구가 보이는가** (`read`, `write`, `shell`, `subagent/<이름>`) |
 | `resources` | 시작할 때 함께 읽는 파일. 여기서는 실습 ①의 Steering 규칙 |
-| `permissions` | **그 도구로 무엇을 해도 되는가**. 읽기 명령만 허용하고 파일 쓰기는 거부 |
-
-### 1-2. 확인하기 (AI 사용 없음)
+| `permissions` | **그 도구로 무엇을 해도 되는가**. 읽기 명령만 허용하고 `fs_write`는 `deny` |
 
 ```bash
-kiro-cli agent validate --path .kiro/agents/code-reviewer.json   # 아무것도 출력되지 않으면 정상
-kiro-cli agent list                                              # code-reviewer 가 (v3 format) 으로 보이면 성공
+kiro-cli agent list   # code-reviewer 가 (v3 format) 으로 보이면 정상
 ```
 
-### 1-3. 전환해서 써 보기 (AI 1회)
+### 1-2. 전환해서 써 보기 (AI 1회)
 
 **에이전트 전환**
 - IDE: 채팅 입력창 하단의 에이전트 드롭다운 → `code-reviewer`
@@ -96,15 +55,49 @@ src/main/java/com/aind/hr/service/EmployeeService.java 파일만 점검해줘.
 
 > 💡 "그럼 바로 고쳐줘"라고 해 보세요. `fs_write`가 `deny`라서 `code-reviewer`는 파일을 고칠 수 없습니다. 역할이 **권한으로** 강제되는 것을 확인할 수 있습니다.
 
+### 1-3. 직접 고쳐 보기
+
+**수정 ① 점검 항목 하나 추가하기 (AI 1회)**
+
+`code-reviewer.json`의 `prompt`에서 `12. 기존 동작 변경·새 의존성 없음\n` 바로 뒤에 아래 한 줄을 추가하고, `점검 항목 (12개)`를 `점검 항목 (13개)`로, `12개 항목 결과`를 `13개 항목 결과`로 바꿉니다.
+
+```text
+13. catch 블록에서 예외를 로그로 남김\n
+```
+
+> ⚠️ `prompt`는 JSON 문자열 한 줄이라 줄바꿈을 `\n`으로 씁니다. 엔터로 줄을 바꾸면 JSON이 깨집니다.
+
+저장한 뒤 **새 대화**에서 `code-reviewer`로 같은 요청을 다시 보냅니다. 결과 표에 **13번 위반**이 새로 나오면 성공입니다. 이 프로젝트의 서비스 코드에는 로그 코드가 없어서, `EmployeeService`의 `catch` 블록(44행 근처)이 지적됩니다.
+
+> 💡 프롬프트 한 줄을 바꿨더니 에이전트의 점검 기준이 바뀌었습니다. SA 오케스트레이터의 리뷰어들도 같은 방식으로 관점을 조정합니다.
+
+**수정 ② 일부러 망가뜨려 보기 (AI 사용 없음)**
+
+`.kiro/agents/sa-orchestrator.json`의 `tools`에서 `"subagent/infra-reviewer"`를 `"subagent/infra-reviewr"`(오타)로 바꾸고 저장한 뒤 두 가지로 검사합니다.
+
+```bash
+kiro-cli agent validate --path .kiro/agents/sa-orchestrator.json   # 출력 없음 → 형식은 정상으로 판정
+python3 .kiro/docs/validate_agents.py                              # PROBLEMS: 존재하지 않는 에이전트 'infra-reviewr' 참조
+```
+
+공식 검증은 **형식**만 보기 때문에 오타를 통과시킵니다. 저장소의 `validate_agents.py`는 **오케스트레이터가 부르는 이름이 실제로 있는지**까지 확인해서 잡아냅니다. 실행하기 전에 이 스크립트를 돌리는 이유입니다.
+
+**되돌리기** (실습 후 반드시)
+
+```bash
+git checkout -- .kiro/agents/sa-orchestrator.json .kiro/agents/code-reviewer.json
+python3 .kiro/docs/validate_agents.py   # PROBLEMS: (none) 이면 원상복구 완료
+```
+
 ### 1-4. 하나에서 여럿으로
 
-이 저장소의 SA 오케스트레이터는 방금 만든 것과 같은 구조의 커스텀 에이전트 6개로 되어 있습니다.
+SA 오케스트레이터는 방금 다룬 것과 같은 구조의 커스텀 에이전트 6개로 되어 있습니다.
 - **리뷰어 4개**(`architecture-` `infra-` `api-` `db-reviewer`)와 **`risk-aggregator`**: `code-reviewer`처럼 한 가지 관점만 보는 읽기 전용 에이전트
 - **`sa-orchestrator`**: 위 5개를 서브에이전트로 묶은 에이전트. `code-reviewer`와 비교해 두 가지가 다릅니다.
-  - `tools`에 `subagent/architecture-reviewer` 등 5개가 있어 **이 5개만** 서브에이전트로 띄울 수 있습니다.
+  - `tools`에 `subagent/architecture-reviewer` 등 5개가 있어 **이 5개만** 서브에이전트로 띄울 수 있습니다. 수정 ②에서 고친 바로 그 부분입니다.
   - `permissions`의 `fs_write`가 `.kiro/reports/**`에만 허용돼 리포트만 쓸 수 있습니다.
 
-> 💡 `.kiro/agents/api-reviewer.json`을 열어 방금 만든 `code-reviewer.json`과 비교해 보세요. 필드 구성이 같고 `prompt`의 관점만 다릅니다.
+> 💡 `code-reviewer`는 오케스트레이터의 서브에이전트 목록에 없어서 SA 리뷰에는 호출되지 않습니다. 단독으로 쓰는 리뷰어입니다.
 
 ---
 
@@ -246,8 +239,9 @@ grep -n '\${' $R        # '사용 0건' 확인 문장이어야 함 (지적이면
 ## 6. 완료 체크리스트
 
 **기본**
-- [ ] `code-reviewer`를 만들고 `agent list`에서 확인했다
-- [ ] `code-reviewer`가 `EmployeeService`의 광범위한 catch를 지적했다
+- [ ] `code-reviewer`가 `EmployeeService`의 광범위한 catch(6번)를 지적했다
+- [ ] 점검 항목 13번을 추가하고, 13번 위반이 새로 나오는 것을 확인했다
+- [ ] 오타를 `validate_agents.py`가 잡는 것을 확인하고 원상복구했다
 - [ ] 에이전트 파일에서 `tools`와 `permissions`의 차이를 설명할 수 있다
 - [ ] `validate_agents.py`가 PROBLEMS none
 - [ ] 샘플 리포트에서 "나와야 함" 4개를 찾았다
@@ -263,7 +257,8 @@ grep -n '\${' $R        # '사용 0건' 확인 문장이어야 함 (지적이면
 
 | 증상 | 원인 | 해결 |
 |------|------|------|
-| `code-reviewer`가 목록에 없음 | 파일 위치가 `.kiro/agents/`가 아님, JSON 문법 오류, 프로젝트 루트 밖에서 실행 | `kiro-cli agent validate --path .kiro/agents/code-reviewer.json`의 오류 메시지 확인 |
+| 수정 후 `code-reviewer`가 목록에서 사라짐 | `prompt`에 엔터로 줄을 바꿔 JSON이 깨짐 | `kiro-cli agent validate --path .kiro/agents/code-reviewer.json`으로 오류 위치 확인, 줄바꿈은 `\\n`으로 |
+| 13번이 결과에 안 나옴 | 이전 대화를 이어서 요청함 | 새 대화에서 다시 요청 |
 | 서브에이전트가 안 뜸 | 메인 전환 안 함, IDE가 Supervised 모드, CLI를 `--v3` 없이 실행 | `sa-orchestrator`로 전환, Autopilot, `--v3` |
 | 호출마다 승인창 반복 | `permissions`의 `subagent` 규칙 미적용 (V2 하네스) | `--v3`로 실행. 급하면 수동 승인 |
 | 새 리포트가 안 보임 | 실행 실패했는데 샘플 파일을 보고 있음 | `ls -lt`로 타임스탬프 확인 |
