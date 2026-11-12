@@ -6,7 +6,7 @@ PR 준비를 위한 전체 워크플로를 시작합니다:
 
 ## Step 1: 코드 품질 체크
 1. 포맷: 이 프로젝트에는 포매터가 없으니 건너뛰고 "해당 없음"으로 보고하세요.
-2. 코드 컨벤션 점검: `git diff main...HEAD --name-only -- src/main`으로 바뀐 파일을 찾고, 그 파일만 `.kiro/steering/code-conventions.md`의 C1~C10 기준으로 점검해 위반을 `규칙 번호 | 파일:라인`으로 정리
+2. 코드 컨벤션 점검: `git diff main...HEAD --name-only -- src/main`으로 바뀐 파일을 찾고, 그 파일만 `.kiro/steering/code-conventions.md`의 모든 규칙 기준으로 점검해 위반을 `규칙 번호 | 파일:라인`으로 정리
 3. `./mvnw -q compile` 실행
 4. `cd frontend && npm run build` 실행
 - 오류가 발생해도 절대 코드를 수정하지 마세요. PR 내용과 별도로 안내하세요.

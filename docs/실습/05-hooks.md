@@ -2,150 +2,177 @@
 
 > **과정**: 실무 활용
 > **소요 시간**: 약 30분
+> **AI 요청 횟수**: 약 4회
 > **난이도**: ★★★☆☆
-> **실습 목표**: 파일 저장 등 이벤트에 맞춰 **테스트·타입 체크를 자동 실행**하는 Hook을 만들어, 수동 반복 검증을 자동 파이프라인으로 바꾼다.
+> **실습 목표**: 코드 컨벤션을 Steering으로 정하고, **훅이 변경 직후 자동으로 컨벤션을 점검**하게 한다. 이어서 `/pr-workflow` 한 줄로 품질 체크부터 PR 본문 작성까지 진행한다.
 
 ---
 
 ## 0. 이 실습에서 배우는 것
 
-- Hook이 무엇이고 **언제** 실행되는지 (파일 저장/도구 사용/세션 시작 등 이벤트)
-- 자바 파일이 저장·수정될 때 **백엔드 컴파일**이, 프론트 파일이 저장·수정될 때 **타입 체크**가 자동으로 돌게 만들기
-- 반복 검증을 자동화해 "고치고 깜빡 검증 안 함"을 방지하기
+- Hook이 무엇이고 **언제** 실행되는지 (트리거 → 액션)
+- 지시문만 적으면 되는 **Ask Kiro(`agent`) 훅**
+- 필요할 때 실행하는 워크플로를 **슬래시 명령(`/pr-workflow`)**으로 만드는 법
 
-> 💡 **왜 Hook인가**: 실습 ④에서 만든 "회귀 검증"처럼, 좋은 절차도 **사람이 매번 기억해 실행**해야 하면 결국 빠집니다. Hook은 그 실행을 **이벤트에 묶어 자동화**합니다.
+> 💡 **왜 Hook인가**: "코드 고친 뒤 컨벤션 확인", "PR 올리기 전 빌드·본문 작성"처럼 좋은 절차도 사람이 매번 기억해야 하면 결국 빠집니다. Hook은 이런 일을 **이벤트에 묶어 자동으로** 돌립니다.
 
 ---
 
-## 1. Hook이란
+## 1. 준비된 파일 (AI 사용 없음)
 
-Hook은 특정 **이벤트**가 발생하면 자동 실행되는 작업입니다. 정의는 `.kiro/hooks/<id>.json`.
+저장소에 4개 파일이 있습니다. 모두 **설정과 지시문**이고, 스크립트는 없습니다.
 
-주요 트리거:
+| 파일 | 역할 |
+|------|------|
+| `.kiro/steering/code-conventions.md` | 백엔드 컨벤션 (처음엔 C1~C10). `src/main/` 파일을 다룰 때 자동으로 대화에 포함됩니다 (`inclusion: fileMatch`). |
+| `.kiro/hooks/convention-review.json` | **훅**. 에이전트가 응답을 마칠 때, 이번 턴에 고친 `src/main/` 파일을 `code-conventions.md`의 규칙으로 점검합니다. |
+| `.kiro/steering/pr-workflow.md` | **`/pr-workflow`** 슬래시 명령. 코드 품질 체크 → PR 템플릿 작성 → 최종 확인을 차례로 진행합니다 (`inclusion: manual`). |
+| `.github/pull_request_template.md` | PR 본문 형식 |
+
+### 훅 파일 구조
+
+`.kiro/hooks/convention-review.json`을 엽니다.
+
+```json
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Convention review after changes",
+      "trigger": "Stop",
+      "action": {
+        "type": "agent",
+        "prompt": "이번 턴에 src/main/ 아래 파일(Java, Mapper XML)을 수정했다면, ... 점검하고 ... 보고만 해. ... 수정하지 않았다면 아무 말도 하지 말고 끝내."
+      }
+    }
+  ]
+}
+```
+
+| 필드 | 뜻 |
+|------|-----|
+| `trigger` | **언제** 실행하나. `Stop`은 에이전트가 한 턴의 응답을 마쳤을 때 |
+| `action.type` | **무엇을** 하나. `agent`(Ask Kiro)는 지시문을 에이전트에게 전달하고, `command`(Run Command)는 셸 명령을 실행 |
+| `action.prompt` | 에이전트에게 전달할 지시문 |
+
+주요 트리거는 이렇습니다.
 
 | 트리거 | 언제 |
 |--------|------|
-| `PostFileSave` | **에이전트가** 파일을 저장·수정할 때 (matcher 정규식으로 경로 필터) |
-| `PostFileCreate` / `PostFileDelete` | **에이전트가** 파일을 생성/삭제할 때 |
-| `PreToolUse` / `PostToolUse` | 도구 실행 전/후 |
+| `PostFileSave` / `PostFileCreate` / `PostFileDelete` | **에이전트가** 파일을 저장·생성·삭제할 때 (`matcher`로 경로 필터) |
+| `PreToolUse` / `PostToolUse` | 에이전트가 도구를 쓰기 전/후 |
 | `Stop` | 에이전트가 한 턴의 응답을 마쳤을 때 |
-| `PostTaskExec` | Spec 작업 완료 후 |
-| `SessionStart` | 세션 시작 시 |
+| `PreTaskExec` / `PostTaskExec` | Spec 작업 시작 전/완료 후 |
+| `SessionStart` / `UserPromptSubmit` | 세션 시작 / 프롬프트 전송 시 |
 
-> ⚠️ **"저장"은 에이전트의 파일 변경을 뜻합니다**: Kiro 공식 문서는 파일 트리거를 "에이전트가 파일을 만들거나 저장·수정하거나 삭제할 때" 실행되는 것으로 설명합니다([Hook types](https://kiro.dev/docs/hooks/types/), 2026-11-06 갱신본 기준). 사람이 에디터에서 직접 저장할 때도 도는지는 문서에 나와 있지 않으니, 4절에서 **둘 다 시험**해 보세요.
+> 💡 **왜 `Stop`인가**: 에이전트가 파일을 여러 개 고치면 `PostFileSave`는 파일마다 돌아서 AI를 여러 번 부릅니다. `Stop`은 **한 턴에 한 번**만 돌아서 빠르고 사용량이 적습니다.
 
-액션 타입:
+> 💡 **버튼으로 실행하는 훅은 어디 갔나**: 예전 IDE의 수동(버튼) 트리거 훅은 지금은 새로 만들 수 없습니다. Kiro 공식 문서는 필요할 때 실행하는 작업을 `inclusion: manual` Steering으로 만들어 `/파일이름`으로 실행하라고 안내합니다. `/pr-workflow`가 그 방식입니다. 지시문을 적는 방식은 예전 버튼 훅의 "Ask Kiro"와 같습니다.
 
-| 타입 | 동작 |
-|------|------|
-| `command` | 셸 명령 실행 (stdin으로 세션 컨텍스트 JSON 수신) |
-| `agent` | 정적 프롬프트를 모델 컨텍스트에 추가 |
-
-> 💡 이 저장소에는 아직 `.kiro/hooks/` 폴더가 없습니다. 이 실습에서 **처음으로** 만들어 봅니다.
+훅이 로드됐는지는 IDE 탐색기의 **Agent Hooks** 섹션에서 확인합니다. 훅은 **새 세션**부터 적용되니, 새 대화를 열고 진행하세요.
 
 ---
 
-## 2. 시나리오
+## 2. 훅 동작 확인 — 일부러 위반하기 (AI 1회)
 
-이 프로젝트의 실제 빌드/테스트 명령(출처: `.kiro/steering/engineering-rules.md`). 훅에서는 출력을 줄이려고 `-q`(quiet)를 덧붙입니다.
-
-| 대상 | 명령 | 실행 위치 |
-|------|------|-----------|
-| 백엔드 컴파일 | `./mvnw -q compile` | 프로젝트 루트 |
-| 백엔드 테스트 | `./mvnw -q test` (로컬 MySQL 필요) | 프로젝트 루트 |
-| 프론트 타입 체크 | `npm run typecheck` | `frontend/` |
-
-> 💡 command 훅은 **프로젝트 루트에서** 실행되므로 `./mvnw`는 그대로 쓰고, 프론트는 `cd frontend && …`로 위치를 옮깁니다.
-
-이번에 만들 Hook:
-
-- **Hook A**: `src/**/*.java` 저장 시 → 백엔드 **컴파일**로 즉시 깨짐 감지
-- **Hook B**: `frontend/src/**/*.ts(x)` 저장 시 → 프론트 **타입 체크**
-
-> ⚠️ **저장 시 전체 테스트(`mvnw test`)는 과함**: 저장마다 수십 초가 걸리면 흐름이 끊깁니다. 저장 훅은 **빠른 컴파일/타입 체크**로, 무거운 전체 테스트는 Spec 작업 완료(`PostTaskExec`)나 수동 실행으로 두는 것이 실무적입니다.
-
----
-
-## 3. Hook 작성
-
-Hook은 `createHook` 도구로 만들거나, `.kiro/hooks/*.json`을 직접 작성합니다. Kiro 채팅에서:
+기본 에이전트 채팅에 입력합니다.
 
 ```text
-PostFileSave 훅을 만들어줘.
-- 이름: "Backend compile on save"
-- matcher: src/.*\.java$ 저장 시
-- action: command 로 프로젝트 루트에서 `./mvnw -q compile` 실행
+실습용이야. 컨벤션 위반인 걸 알고 있으니 그대로 해줘.
+src/main/java/com/aind/hr/service/EmployeeService.java 의 getEmployeeList() 첫 줄에
+System.out.println("직원 목록 조회"); 를 추가해줘.
 ```
 
-생성되는 파일 예시 — `.kiro/hooks/backend-compile-on-save.json`:
+**기대 결과**
+1. Kiro가 코드를 추가합니다. `code-conventions.md`가 대화에 포함돼 있어서, 추가하기 전에 "C2 위반"이라고 먼저 경고할 수도 있습니다. 그것도 Steering이 동작한 것입니다.
+2. 응답이 끝나면 **훅이 실행되어** 점검 표가 이어서 나옵니다.
 
-```json
-{
-  "version": "v1",
-  "hooks": [{
-    "name": "Backend compile on save",
-    "trigger": "PostFileSave",
-    "matcher": "src/.*\\.java$",
-    "action": { "type": "command", "command": "./mvnw -q compile" },
-    "timeout": 120
-  }]
-}
+   | 규칙 번호 | 파일:라인 | 설명 |
+   |-----------|-----------|------|
+   | C2 | `EmployeeService.java:23` 근처 | 콘솔 출력 금지 |
+
+3. 표가 나온 뒤에는 훅이 다시 돌아도 "이번 턴에 수정하지 않았다면 아무 말도 하지 말고 끝내" 지시 때문에 조용히 끝납니다.
+
+이번에는 코드를 고치지 않는 질문을 해 봅니다.
+
+```text
+EmployeeService는 무슨 역할을 하는 클래스야?
 ```
 
-> 💡 **`timeout`을 늘려 두세요**: command 훅의 기본 제한 시간은 60초입니다. Maven은 처음 실행할 때 의존성을 내려받느라 60초를 넘길 수 있어서, 백엔드 훅에는 `"timeout": 120`을 명시했습니다.
+**기대 결과**: 답변 뒤에 점검 표가 **나오지 않습니다**. 이번 턴에 `src/main/` 파일을 고치지 않았기 때문입니다.
 
-프론트 타입 체크 — `.kiro/hooks/frontend-typecheck-on-save.json`:
+**되돌리기**
 
-```json
-{
-  "version": "v1",
-  "hooks": [{
-    "name": "Frontend typecheck on save",
-    "trigger": "PostFileSave",
-    "matcher": "frontend/src/.*\\.tsx?$",
-    "action": { "type": "command", "command": "cd frontend && npm run typecheck" }
-  }]
-}
+```bash
+git checkout -- src/main/java/com/aind/hr/service/EmployeeService.java
 ```
-
-> ⚠️ **matcher는 정규식(JSON 안이라 백슬래시 2개)**: `\.java$`는 JSON에서 `"\\.java$"`로 써야 합니다. `PostFileSave`에서 matcher는 **파일 경로**에 대해 테스트됩니다.
-
-> 💡 `command` 액션은 stdin으로 세션 컨텍스트(JSON)를 받습니다. 저장된 파일 경로 등을 활용해 더 정교한 스크립트도 가능합니다.
 
 ---
 
-## 4. 동작 확인
+## 3. 프로젝트에 맞게 개선 — 컨벤션 하나 추가하기 (AI 1회)
 
-훅은 **에이전트의 파일 변경**에 반응하므로, 먼저 Kiro에게 파일을 수정시켜 확인합니다.
+이 프로젝트의 Repository 메서드는 모두 `select`, `insert`, `update`, `delete`로 시작합니다(`selectAllWithDepartment`, `updateCheckOut` 등). 이 규칙을 컨벤션에 추가합니다.
 
-1. Kiro 채팅에 입력합니다. 확인용이므로 코드 동작은 바꾸지 않는 변경입니다.
-   ```text
-   src/main/java/com/aind/hr/service/EmployeeService.java 의 클래스 선언 위에 주석 한 줄만 추가해줘. 다른 건 바꾸지 마.
-   ```
-2. Hook A가 실행되어 `./mvnw -q compile`이 도는지 확인합니다. 훅이 로드됐는지는 IDE의 탐색기 **Agent Hooks** 섹션, CLI V3에서는 `/hooks`로 볼 수 있습니다.
-3. 이번에는 Kiro에게 컴파일 에러가 나는 변경을 시킨 뒤(예: "임시로 세미콜론 하나를 지워줘"), 훅이 에러를 보고하는지 봅니다. 확인 후 반드시 되돌리세요.
-4. 프론트도 같은 방식으로 `frontend/src/api/employees.ts`에 주석 한 줄을 추가시켜 Hook B(타입 체크)가 도는지 확인합니다.
-5. (선택) 사람이 에디터에서 직접 파일을 열어 저장했을 때도 훅이 도는지 비교해 봅니다. 도는지는 환경에 따라 다를 수 있으니 결과를 기록해 두세요.
+`.kiro/steering/code-conventions.md`의 C10 행 **바로 아래**에 한 줄을 추가합니다.
 
-- [ ] Kiro가 자바 파일을 수정하면 컴파일 훅이 실행된다
-- [ ] 컴파일 에러를 만들면 훅이 에러를 보고한다
-- [ ] Kiro가 프론트 파일을 수정하면 타입 체크 훅이 실행된다
-- [ ] 되돌린 뒤 `git status`에 의도하지 않은 변경이 남지 않았다
+```markdown
+| C11 | Repository 메서드 이름은 `select`, `insert`, `update`, `delete` 중 하나로 시작한다 |
+```
 
-> 💡 **실무 팁 — 훅은 "빠르고 조용하게"**: 저장할 때마다 도는 훅은 **빨라야** 흐름을 안 끊습니다. 느린 작업(전체 테스트, 빌드)은 `PostTaskExec`(Spec 작업 완료)나 커밋 전 단계로 미루세요.
+훅과 `/pr-workflow`는 고칠 필요가 없습니다. 둘 다 "`code-conventions.md`의 **모든 규칙**"을 기준으로 점검하도록 적혀 있어서, Steering에 추가한 규칙을 그대로 따릅니다.
 
-> 💡 **파일마다 말고 한 턴에 한 번**: 에이전트가 파일을 여러 개 고치면 저장 훅은 그만큼 여러 번 돕니다. 컴파일처럼 "전체를 한 번 확인"하면 되는 작업은 `Stop` 트리거(에이전트가 응답을 마쳤을 때)에 묶는 방법도 있습니다. 공식 문서도 `Stop`의 용도로 "코드를 컴파일하고 실패를 에이전트에 알리기"를 예로 듭니다.
+**새 대화**를 열고 입력합니다.
 
-> ⚠️ **훅은 명령을 자동 실행합니다**: `.kiro/hooks/`가 저장소에 커밋되면 팀원 모두의 환경에서 같은 명령이 돌아갑니다. 훅에 넣는 명령은 PR에서 리뷰하고, 파일 삭제·푸시·DB 변경처럼 되돌리기 어려운 명령은 넣지 마세요.
+```text
+실습용이야. 컨벤션 위반인 걸 알고 있으니 그대로 해줘.
+src/main/java/com/aind/hr/repository/EmployeeRepository.java 에
+Employee findByEmail(@Param("email") String email); 메서드 선언만 추가해줘. XML은 추가하지 마.
+```
+
+**기대 결과**: 훅 점검 표에 **C11 위반**(`findByEmail`)이 나오면 성공입니다.
+
+> 💡 규칙 한 줄을 추가했더니 훅의 점검 기준이 바로 바뀌었습니다. 훅은 지시문만 들고 있고, **기준은 Steering 한 곳**에 있어서 규칙을 고칠 곳이 하나뿐입니다.
+
+**되돌리기** (코드만 되돌리고, 추가한 C11은 남겨도 됩니다)
+
+```bash
+git checkout -- src/main/java/com/aind/hr/repository/EmployeeRepository.java
+```
+
+---
+
+## 4. `/pr-workflow` 실행하기 (AI 1회)
+
+채팅에 입력합니다.
+
+```text
+/pr-workflow
+```
+
+`pr-workflow.md`의 지시문대로 차례로 진행됩니다. 명령 실행 승인을 물으면 허용합니다.
+
+| 단계 | 하는 일 |
+|------|---------|
+| Step 1 코드 품질 체크 | 포맷(이 프로젝트엔 포매터가 없어 "해당 없음") → `main` 대비 바뀐 `src/main` 파일을 컨벤션으로 점검 → `./mvnw -q compile` → `cd frontend && npm run build` |
+| Step 2 PR 템플릿 작성 | `git diff main...HEAD`로 변경 분석 → `.github/pull_request_template.md` 형식으로 본문 작성 |
+| Step 3 최종 확인 | 작성된 PR 본문을 마크다운으로 보여 주고, 추가로 확인할 사항 안내 |
+
+**기대 결과**: 마지막에 PR 본문이 마크다운 블록으로 나옵니다. **검증 표에는 실제로 실행한 결과만** 적혀 있어야 합니다. 예를 들어 컴파일이 실패했다면 실패로 적혀 있어야 합니다.
+
+> 💡 지시문에 "오류가 발생해도 절대 코드를 수정하지 마세요"와 "PR 생성은 요청하면 그때"가 들어 있어서, `/pr-workflow`는 **보고만** 하고 코드를 바꾸거나 PR을 올리지 않습니다. 실제로 PR을 만들려면 결과를 확인한 뒤 따로 요청합니다.
+
+> 💡 **슬래시 명령 vs 훅**: `/pr-workflow`는 **사람이 원할 때** 실행하고, 훅은 **이벤트가 생기면 자동으로** 실행합니다. 둘 다 지시문만 적으면 되는 방식이라, 반복 작업의 성격에 따라 골라 씁니다.
 
 ---
 
 ## 5. 완료 체크리스트
 
-- [ ] `PostFileSave` Hook을 만들었다 (백엔드 컴파일)
-- [ ] 프론트 타입 체크 Hook을 만들었다
-- [ ] 저장 시 자동 실행과 에러 감지를 확인했다
-- [ ] 무거운 전체 테스트는 저장 훅에서 뺐다
+- [ ] 훅 파일에서 `trigger`와 `action`의 뜻을 설명할 수 있다
+- [ ] 위반 코드를 추가시켰더니 훅이 C2 위반을 보고했다
+- [ ] 코드를 고치지 않은 질문에서는 훅이 아무것도 보고하지 않았다
+- [ ] C11을 추가했고, 훅이 C11 위반을 보고했다
+- [ ] `/pr-workflow`로 PR 본문을 받았다
+- [ ] `git checkout`으로 실습 중 바꾼 코드를 되돌렸다
 
 ---
 
@@ -153,19 +180,21 @@ PostFileSave 훅을 만들어줘.
 
 | 증상 | 원인 | 해결 |
 |------|------|------|
-| 에디터에서 직접 저장했는데 훅이 안 돎 | 파일 트리거는 **에이전트의 파일 변경**에 반응하도록 문서화됨 | Kiro에게 파일을 수정시켜 확인 (4절) |
-| 에이전트가 고쳤는데도 훅이 안 돎 | matcher 정규식 불일치 | 경로 기준인지 확인, `"src/.*\\.java$"`처럼 이스케이프 |
-| 첫 실행에서 훅이 시간 초과 | command 훅 기본 제한 60초, Maven 의존성 다운로드 | `"timeout": 120`처럼 늘리기 |
-| 훅이 모든 파일에 실행됨 | matcher 누락/과대 | 트리거·matcher를 좁게 지정 |
-| 저장마다 너무 느림 | 무거운 명령(전체 빌드/테스트) | 컴파일/타입 체크로 교체, 무거운 건 다른 트리거로 |
-| 프론트 훅에서 `npm: not found` | 작업 디렉터리/환경 문제 | `cd frontend && ...`로 위치 지정, Node 설치 확인 |
+| 훅이 실행되지 않음 | 훅을 추가하거나 고친 뒤 같은 세션을 계속 씀 | 새 대화(세션)를 열고 다시 시도 |
+| 훅 파일을 고친 뒤 Agent Hooks에서 사라짐 | `prompt`의 따옴표를 지워 JSON이 깨짐 | `git checkout -- .kiro/hooks/convention-review.json` 후 다시 수정 |
+| C11이 점검되지 않음 | 규칙을 추가한 뒤 같은 대화를 계속 씀 | 새 대화에서 다시 요청 |
+| 점검 표가 계속 반복됨 | 훅 지시문의 "수정하지 않았다면 아무 말도 하지 말고 끝내"가 빠짐 | 지시문 끝 문장을 되살리기 |
+| Kiro가 위반 코드를 거부함 | Steering이 컨벤션 위반을 막음 | 요청에 "실습용이야. 위반인 걸 알고 있으니 그대로 해줘"를 넣기 |
+| `/pr-workflow`가 목록에 없음 | 파일 이름이나 front-matter(`inclusion: manual`)가 다름 | `.kiro/steering/pr-workflow.md`와 첫 3줄 확인 |
+| 컴파일·빌드 단계 실패 | Java·Node 미설치 또는 백엔드 오류 | 실습 ⓪의 환경 확인. 실패도 결과로 보고되는 것이 정상 |
 
 ---
 
 ## 7. 돌아보기
 
-- 이제 네 가지가 모였습니다: **Steering(규칙)** + **Agent(역할)** + **Skills(절차, 실습 ④)** + **Hooks(자동 실행)**. 이 조합이 "자동 흐름 속에서 알아서 검증·리뷰하는" 개발 환경의 뼈대입니다.
-- 특히 실습 ④의 회귀 검증 Skill을 `PostTaskExec` 훅으로 묶으면, "작업 완료 → 자동 회귀 검증"이 됩니다.
+- **Steering(기준) + Hook(자동 실행) + 슬래시 명령(필요할 때 실행)** 을 조합하면, 규칙은 한 곳에 두고 점검은 자동으로 돌릴 수 있습니다.
+- 훅이 AI로 점검하면 결과가 매번 조금씩 다를 수 있습니다. 실무에서 **반드시 지켜야 하는** 규칙은 Checkstyle 같은 린터를 빌드에 넣고, 훅의 `command` 액션으로 그 린터를 실행하는 방식이 더 확실합니다.
+- 다른 프로젝트에서는 `code-conventions.md`의 규칙과 `pr-workflow.md`의 빌드 명령·기준 브랜치만 바꾸면 그대로 쓸 수 있습니다.
 - 다음(⑥)에서는 이 모든 것을 **내 프로젝트에 이식**하는 방법을 정리합니다.
 
 ---
