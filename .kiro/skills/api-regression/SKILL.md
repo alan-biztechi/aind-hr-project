@@ -23,9 +23,10 @@ description: 백엔드(Spring Boot) 코드를 수정한 직후 컴파일, 변경
 
 ### 2. 변경 범위
 ```bash
-git status --short
-git diff --stat
+git status --short -- src
+git diff --stat -- src
 ```
+- 백엔드 소스(`src/`)만 본다. `.kiro/` 같은 설정 파일 변경은 대상이 아니다.
 - 수정한 파일이 의도한 범위(고친 도메인의 Controller·Service·Repository·Mapper XML) 안에 있는지 본다.
 - 범위 밖 파일이 바뀌었으면 보고에 적는다.
 

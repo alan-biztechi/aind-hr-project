@@ -112,9 +112,11 @@ updateCheckOut 쿼리와 함께 원인을 분석하고, 근거를 파일:라인�
 
 ```java
 int updateCheckOut(@Param("id") Integer id,
-                   @Param("checkOut") LocalTime checkOut,
+                   @Param("checkOut") java.time.LocalTime checkOut,
                    @Param("status") String status);
 ```
+
+> ⚠️ 이 파일은 `LocalTime`을 import하지 않고 `java.time.LocalTime`으로 씁니다. `LocalTime`만 쓰면 컴파일 에러가 납니다.
 
 ### 3-3. Service에서 status 전달 + 정상 퇴근도 상태 일관화
 
@@ -144,7 +146,7 @@ public UpdateResponse checkOut(Integer id, LocalTime checkOut) {
 | 부분 | 내용 |
 |------|------|
 | 맨 위 `---` 사이 (frontmatter) | `name`(슬래시 명령 이름)과 `description`(언제 쓰는지). Kiro는 평소에 이 두 줄만 읽고, 요청이 `description`과 맞을 때 본문을 불러옵니다. |
-| 절차 | 1. 컴파일 → 2. 변경 범위(`git diff`) → 3. 고친 기능 → 4. 인접 기능 스모크(직원 15·부서 5·휴가 10) |
+| 절차 | 1. 컴파일 → 2. 변경 범위(`src/`의 `git diff`) → 3. 고친 기능 → 4. 인접 기능 스모크(직원 15·부서 5·휴가 10) |
 | 보고 형식 | 단계별 통과/실패와 근거를 표로 |
 
 > 💡 Skill은 JSON이 아니라 **폴더 + `SKILL.md`** 형식입니다. 위치는 `.kiro/skills/<이름>/SKILL.md`이고, 폴더 이름과 `name`을 같게 둡니다.
@@ -183,6 +185,7 @@ Kiro가 명령 실행이나 데이터 생성(출근 등록) 승인을 물으면 
 ### 5. 프로젝트 규칙 — 출퇴근을 고쳤을 때
 - `attendance`는 `(employee_id, work_date)`가 UNIQUE다. 출근을 등록하기 전에 **아직 쓰지 않은 날짜**를 사용자에게 확인한다.
 - 조퇴 확인과 함께 **지각 후 정상 퇴근**도 확인한다. 출근 09:30 → 퇴근 18:30이면 `status`가 `LATE`로 남아야 한다.
+- 같은 날짜에 두 건을 만들 때는 **서로 다른 직원**을 쓴다. 같은 직원이면 UNIQUE 제약으로 두 번째 출근이 실패한다.
 - 결과는 `GET /v1/attendances/date/<날짜>`로 확인한다.
 ```
 
@@ -199,8 +202,9 @@ Kiro가 명령 실행이나 데이터 생성(출근 등록) 승인을 물으면 
 ```
 
 **기대 결과**:
-- Kiro가 출근 등록 전에 **날짜를 먼저 묻습니다**. 아직 쓰지 않은 날짜(예: `2026-12-03`)를 알려 줍니다.
-- 보고 표에 **5. 프로젝트 규칙** 행이 생기고, 조퇴 `EARLY_LEAVE`와 지각 후 정상 퇴근 `LATE`가 모두 확인됩니다.
+- 출근을 등록하기 전에 Kiro가 **쓸 날짜를 확인합니다**. 아직 쓰지 않은 날짜(예: `2026-12-03`)를 알려 줍니다. Kiro가 날짜를 먼저 제안하며 확인을 구할 수도 있는데, 그것도 정상입니다.
+- 보고 표에 **5. 프로젝트 규칙** 행이 생기고, 조퇴 `EARLY_LEAVE`와 지각 후 정상 퇴근 `LATE`가 **서로 다른 직원으로** 확인됩니다.
+- 2단계 변경 범위는 이번에도 3개 파일입니다. 방금 고친 `SKILL.md`는 `src/` 밖이라 대상이 아닙니다.
 
 > 💡 범용 절차(1~4)는 그대로 두고, 프로젝트 고유의 규칙만 덧붙였습니다. 다른 프로젝트에 가져갈 때는 5절만 그 프로젝트의 규칙으로 바꾸면 됩니다.
 
@@ -220,7 +224,7 @@ git checkout -- .kiro/skills/api-regression/SKILL.md
 - [ ] 조퇴 시 status가 EARLY_LEAVE로 저장된다
 - [ ] 인접 기능에 회귀가 없다
 - [ ] 샘플 Skill을 `/api-regression`으로 실행해 4단계가 모두 통과했다
-- [ ] 프로젝트 규칙(5절)을 추가했고, Kiro가 날짜를 먼저 묻고 지각 `LATE` 유지까지 확인했다
+- [ ] 프로젝트 규칙(5절)을 추가했고, Kiro가 날짜를 확인한 뒤 지각 `LATE` 유지까지 확인했다
 
 ---
 
@@ -233,7 +237,7 @@ git checkout -- .kiro/skills/api-regression/SKILL.md
 | 정상 퇴근인데 status가 null | else 분기에서 status 미전달 | 기존 status 유지하도록 전달 |
 | `/api-regression`이 목록에 없음 | 폴더 이름과 `name` 불일치, frontmatter(`---`) 누락 | `.kiro/skills/api-regression/SKILL.md` 경로와 첫 줄 `---` 확인 |
 | 스모크 건수가 15·5·10이 아님 | 실습 중 데이터를 추가함 | 건수가 아니라 "수정 전과 같은지"로 판단 |
-| 두 번째 실행에서 출근 등록 실패 | 같은 날짜 재사용 (UNIQUE 제약) | 날짜를 바꿔 실행 |
+| 출근 등록 실패 (중복 출근) | 같은 직원·같은 날짜를 다시 씀 (UNIQUE 제약) | 날짜를 바꾸거나 다른 직원으로 실행 |
 
 ---
 
