@@ -11,7 +11,7 @@ Spring Boot + MyBatis 기반 HR 프로젝트를 소재로, Kiro의 핵심 기능
 | [00](./00-시작하기.md) | 기본 | 시작하기 | — | 저장소 준비 및 Spring Boot·MySQL 실행 확인 | 20분 |
 | [01](./01-steering.md) | 기본 | Steering — 개발 표준 설정 | Steering | 기존 Backend 분석 및 개발 규칙 정의 | 25분 |
 | [02](./02-specs.md) | 기본 | Specs — 요구사항·설계 및 구현 | Spec | 기존 HR API를 활용한 React 관리자 화면 개발 | 40분 |
-| [03](./03-sa-orchestrator.md) | **핵심** | SA Orchestrator — 아키텍처 검토 | 커스텀 에이전트 + 멀티에이전트 | `code-reviewer` 직접 만들기, 샘플 리포트로 설계 리스크 검증 (직접 실행은 선택) | 35분 |
+| [03](./03-sa-orchestrator.md) | **핵심** | SA Orchestrator — 아키텍처 검토 | 커스텀 에이전트 + 멀티에이전트 | `code-reviewer` 직접 고쳐 보기, 샘플 리포트로 설계 리스크 검증 (직접 실행은 선택) | 35분 |
 | [04](./04-skills.md) | 실무 활용 | Skills — 버그 수정 및 회귀 테스트 | Skill | 출퇴근 상태 오류 수정 및 검증 절차 재사용 | 30분 |
 | [05](./05-hooks.md) | 실무 활용 | Hooks — 반복 작업 자동화 | Hook | 파일 저장 시 ESLint 자동 실행 훅, (선택) `/pr-workflow` Steering으로 PR 본문 작성 | 30분 |
 | [06](./06-실무적용-faq.md) | 참고 | 실무 적용 가이드 및 FAQ | — | Starter Kit 활용 및 프로젝트별 적용 방법 | — |
@@ -20,10 +20,26 @@ Spring Boot + MyBatis 기반 HR 프로젝트를 소재로, Kiro의 핵심 기능
 >
 > 💡 **시간이 부족하면 ⓪ → ① → ③을 먼저 하세요.** ③ SA Orchestrator가 이 과정의 핵심이고, 앞선 실습 중 ①의 Steering 규칙만 ③에서 쓰입니다.
 
+## 실습별 Kiro 설정 파일 맵
+
+실습 교재(`docs/실습/`)와 Kiro가 실제로 읽는 설정(`.kiro/`)의 연결표입니다. 링크는 이 문서 기준 상대 경로입니다.
+
+| 실습 | 교재 | 사용하는 Kiro 설정·자료 |
+|------|------|--------------------------|
+| 00 | [시작하기](./00-시작하기.md) | [`pom.xml`](../../pom.xml), [`mvnw`](../../mvnw) |
+| 01 | [Steering](./01-steering.md) | [`security-rules.md`](../../.kiro/steering/security-rules.md), [`engineering-rules.md`](../../.kiro/steering/engineering-rules.md), [`architecture-rules.md`](../../.kiro/steering/architecture-rules.md), [`frontend-conventions.md`](../../.kiro/steering/frontend-conventions.md) |
+| 02 | [Specs](./02-specs.md) | 완성 예시 `hr-web-frontend` ([requirements](../../.kiro/specs/hr-web-frontend/requirements.md), [design](../../.kiro/specs/hr-web-frontend/design.md), [tasks](../../.kiro/specs/hr-web-frontend/tasks.md)), 대조용 `dashboard-department-summary` ([requirements](../../.kiro/specs/dashboard-department-summary/requirements.md), [design](../../.kiro/specs/dashboard-department-summary/design.md), [tasks](../../.kiro/specs/dashboard-department-summary/tasks.md)) |
+| 03 | [SA Orchestrator](./03-sa-orchestrator.md) | 에이전트 [`code-reviewer`](../../.kiro/agents/code-reviewer.json), [`sa-orchestrator`](../../.kiro/agents/sa-orchestrator.json), [`architecture-reviewer`](../../.kiro/agents/architecture-reviewer.json), [`infra-reviewer`](../../.kiro/agents/infra-reviewer.json), [`api-reviewer`](../../.kiro/agents/api-reviewer.json), [`db-reviewer`](../../.kiro/agents/db-reviewer.json), [`risk-aggregator`](../../.kiro/agents/risk-aggregator.json) / 가이드 [`.kiro/docs/README.md`](../../.kiro/docs/README.md), [`TESTING.md`](../../.kiro/docs/TESTING.md) (정답지), [`validate_agents.py`](../../.kiro/docs/validate_agents.py) / 샘플 리포트 [`architecture-review-20261023-142313.md`](../../.kiro/reports/architecture-review-20261023-142313.md) |
+| 04 | [Skills](./04-skills.md) | [`api-regression/SKILL.md`](../../.kiro/skills/api-regression/SKILL.md) |
+| 05 | [Hooks](./05-hooks.md) | [`lint-on-save.json`](../../.kiro/hooks/lint-on-save.json), PR 템플릿 [`pull_request_template.md`](../../.github/pull_request_template.md), (선택, 직접 생성 — 전체 내용은 [실습 ⑤ 4-1](./05-hooks.md)) `.kiro/steering/pr-workflow.md` |
+| 06 | [실무 적용 FAQ](./06-실무적용-faq.md) | 위 `.kiro/` 설정 전체 |
+
+> 💡 `.kiro/reports/`의 샘플 리포트는 실습 ③ 4절의 정답지 대조용입니다. 직접 실행하면 새 타임스탬프 파일이 같은 폴더에 추가됩니다.
+
 ## 과정 구성
 
 - **기본 (00~02)**: 환경 준비 → Steering(공통 규칙) → Spec(명세 주도 개발)
-- **핵심 (03)**: 커스텀 에이전트 직접 만들기 → 멀티에이전트 아키텍처 검토
+- **핵심 (03)**: 커스텀 에이전트 직접 고쳐 보기 → 멀티에이전트 아키텍처 검토
 - **실무 활용 (04~05)**: Skill로 버그 수정과 회귀 검증 → Hook 자동화
 - **참고 (06)**: 실무 적용 가이드와 FAQ
 
