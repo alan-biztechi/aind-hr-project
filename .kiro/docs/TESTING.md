@@ -126,10 +126,18 @@ HR 시스템 전체 아키텍처 리뷰해줘
 
 ### 3-1. 실행 흐름 체크리스트
 
+**빠른 모드 (기본)**
+- [ ] architecture / infra / api / db 리뷰어 4명이 **한 번에 병렬로** 스폰된다
+- [ ] 4명이 모두 끝난 뒤 risk-aggregator가 실행된다
+- [ ] 오케스트레이터가 소스 파일을 직접 읽지 않는다 (도구 호출은 서브에이전트 호출과 리포트 저장뿐)
+
+**순차 모드** (요청에 "순차 모드"를 넣은 경우)
 - [ ] architecture-reviewer가 **먼저** 실행된다
 - [ ] 그 다음 infra-reviewer와 api-reviewer가 **병렬**로 스폰된다
 - [ ] 그 다음 db-reviewer가 실행된다
 - [ ] risk-aggregator가 네 리뷰어 findings를 받아 통합한다
+
+**공통**
 - [ ] 최종 판정이 **GO / CONDITIONAL GO / NO-GO** 중 하나로 나온다
 - [ ] 리포트가 `.kiro/reports/architecture-review-<timestamp>.md` 로 저장된다
 

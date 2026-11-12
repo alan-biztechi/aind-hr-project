@@ -145,7 +145,7 @@ Kiro가 "apiClient 사용", "types/api.ts 타입 재사용" 등 **Steering에 �
 
 ## 7. 돌아보기
 
-- Steering은 **"프로젝트 전체에 깔리는 규칙"**입니다. 특정 역할(리뷰어 등)을 **독립 실행**시키려면 Steering이 아니라 **Agent**가 필요합니다 — 이는 실습 ⑦(SA Orchestrator)에서 다룹니다.
+- Steering은 **"프로젝트 전체에 깔리는 규칙"**입니다. 특정 역할(리뷰어 등)을 **독립 실행**시키려면 Steering이 아니라 **Agent**가 필요합니다 — 이는 실습 ③(SA Orchestrator)에서 다룹니다.
 - 다음 실습(②)에서는 이 규칙들이 깔린 상태에서 **Spec**으로 React 화면을 명세 주도로 설계·구현합니다.
 
 ---

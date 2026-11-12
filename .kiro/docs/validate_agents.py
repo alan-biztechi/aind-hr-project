@@ -108,6 +108,25 @@ def main() -> int:
     if missing_trust:
         warnings.append(f"sa-orchestrator: permissions 의 subagent 규칙에 없는 에이전트 {missing_trust} -> 시작할 때 승인 프롬프트가 뜰 수 있음")
 
+    # 승인 대기 방지 (CLI V3: 서브에이전트의 도구 호출은 부모 정책에도 허용돼야 프롬프트 없이 실행됨)
+    def allows(cfg, cap):
+        out = []
+        for rule in cfg.get("permissions", {}).get("rules", []):
+            if rule.get("capability") == cap and rule.get("effect") == "allow":
+                out += rule.get("match", ["*"])
+        return set(out)
+    parent_shell = allows(orch, "shell")
+    parent_read = allows(orch, "fs_read")
+    for sub in sorted(spawnable):
+        cfg = agents.get(sub)
+        if not cfg:
+            continue
+        missing = sorted(allows(cfg, "shell") - parent_shell)
+        if missing:
+            warnings.append(f"{sub}: shell 허용 {missing} 가 sa-orchestrator 에 없음 -> 실행 중 승인 대기로 멈출 수 있음")
+        if allows(cfg, "fs_read") and not parent_read:
+            warnings.append(f"{sub}: fs_read 허용이 sa-orchestrator 에 없음 -> 파일 읽을 때마다 승인 대기")
+
     print("=== 로드된 에이전트 ===")
     for n in agents:
         print(" -", n)

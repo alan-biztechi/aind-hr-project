@@ -1,7 +1,8 @@
-# 실습 ⑥. Skills — 버그 수정 및 회귀 테스트
+# 실습 ④. Skills — 버그 수정 및 회귀 테스트
 
 > **과정**: 실무 활용
-> **소요 시간**: 약 35분
+> **소요 시간**: 약 30분
+> **AI 요청 횟수**: 약 2~3회
 > **난이도**: ★★★☆☆
 > **실습 목표**: 출퇴근 상태 처리 버그를 수정하고, "버그 수정 → 회귀 검증" 절차를 **Skill로 자산화**해 재사용한다.
 
@@ -17,7 +18,7 @@
 
 ---
 
-## 1. 버그 ① — 조퇴 상태가 저장 안 됨 (실제 결함)
+## 1. 버그 — 조퇴 상태가 저장 안 됨 (실제 결함)
 
 `AttendanceService.checkOut()`은 18시 이전 퇴근이면 `status="EARLY_LEAVE"`로 세팅합니다. **그런데 저장이 안 됩니다.**
 
@@ -132,22 +133,6 @@ public UpdateResponse checkOut(Integer id, LocalTime checkOut) {
 
 ---
 
-## 3-보너스. 버그 ② — 모든 예외를 "중복"으로 뭉갬 (함께 보기)
-
-`checkIn()`의 `catch(Exception e)`가 **NPE·커넥션 오류까지 전부** "중복 출근"으로 오분류합니다.
-
-```java
-try {
-    cnt = attendanceRepository.insert(attendance);
-} catch (Exception e) {                 // ← 너무 광범위
-    throw new CustomException(ErrorCode.DUPLICATE_ATTENDANCE);
-}
-```
-
-> ⚠️ **광범위 catch는 장애를 숨깁니다.** 중복 키만 잡으려면 `org.springframework.dao.DuplicateKeyException`만 중복으로 매핑하고, 나머지는 원인을 보존해 재던지고 로깅하세요. (이 수정은 선택 과제로 남겨둡니다 — 실습 ⑤ 리뷰에서 지적된 항목과 연결됩니다.)
-
----
-
 ## 4. 회귀 검증 + Skill로 자산화
 
 수정 후, 깨진 게 없는지 **같은 절차로** 확인합니다. **백엔드를 재시작**(`Ctrl+C` 후 `./mvnw spring-boot:run`)한 뒤 진행하세요. 수정 사항은 재시작해야 반영됩니다.
@@ -223,6 +208,8 @@ description: 출퇴근(AttendanceService/Mapper) 수정 후 조퇴·지각·인�
 - B 실패: 서비스가 기존 status를 전달하는지 확인
 ```
 
+> 💡 **실행 방법**: 저장한 Skill은 채팅에서 `/attendance-regression`처럼 **슬래시 명령**으로 바로 실행할 수 있습니다. 요청 내용이 `description`과 맞으면 Kiro가 자동으로 불러오기도 합니다.
+
 > ⚠️ Skill 파일 위치·형식은 Kiro 버전에 따라 다를 수 있으니, Kiro가 생성한 결과를 우선하세요. 위 예시는 "무엇을 담아야 하는지" 기준입니다.
 
 > 💡 **실무 팁 — 회귀 테스트는 "수정한 것 + 인접한 것" 둘 다**: 버그가 고쳐졌는지(조퇴 반영)만 보지 말고, **건드린 코드 주변**(출퇴근 조회, 목록)이 멀쩡한지도 확인해야 진짜 회귀 검증입니다.
@@ -231,7 +218,7 @@ description: 출퇴근(AttendanceService/Mapper) 수정 후 조퇴·지각·인�
 
 ## 5. 완료 체크리스트
 
-- [ ] 버그 ①을 재현했다 (조퇴 status 미반영)
+- [ ] 버그를 재현했다 (조퇴 status 미반영)
 - [ ] 원인을 코드 근거(`updateCheckOut`에 status 누락)로 찾았다
 - [ ] 쿼리/인터페이스/서비스 3곳을 수정했다
 - [ ] 조퇴 시 status가 EARLY_LEAVE로 저장된다
@@ -254,8 +241,8 @@ description: 출퇴근(AttendanceService/Mapper) 수정 후 조퇴·지각·인�
 
 - 버그 수정의 진짜 완성은 **회귀 검증**입니다. 그리고 그 절차를 **Skill로 자산화**하면 팀 전체가 같은 품질로 재사용합니다.
 - **다른 프로젝트 적용**: "재현 → 원인(파일:라인) → 수정 → 회귀 검증" 4단계와 그 Skill화는 어떤 스택에서도 동일하게 통합니다.
-- [실습 ⑧ Hooks](./08-hooks.md)에서는 컴파일·타입 체크 같은 **가벼운 검증**을 이벤트에 묶어 자동 실행합니다. 이 실습의 회귀 검증은 서버 기동과 데이터가 필요해서 Hook 대신 Skill로 수동 호출하고, 필요하면 Spec 작업 완료 시점(`PostTaskExec`)에 연결할 수 있습니다.
+- [실습 ⑤ Hooks](./05-hooks.md)에서는 컴파일·타입 체크 같은 **가벼운 검증**을 이벤트에 묶어 자동 실행합니다. 이 실습의 회귀 검증은 서버 기동과 데이터가 필요해서 Hook 대신 Skill로 수동 호출하고, 필요하면 Spec 작업 완료 시점(`PostTaskExec`)에 연결할 수 있습니다.
 
 ---
 
-이전 실습 ← [실습 ⑤ Reviewer](./05-reviewer.md) · 다음 실습 → [실습 ⑦ SA Orchestrator](./07-sa-orchestrator.md)
+이전 실습 ← [실습 ③ SA Orchestrator](./03-sa-orchestrator.md) · 다음 실습 → [실습 ⑤ Hooks](./05-hooks.md)
