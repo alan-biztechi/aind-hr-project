@@ -2,19 +2,19 @@
 
 > **과정**: 실무 활용
 > **소요 시간**: 약 30분
-> **AI 요청 횟수**: 약 2~3회
+> **AI 요청 횟수**: 약 3~4회
 > **난이도**: ★★★☆☆
-> **실습 목표**: 출퇴근 상태 처리 버그를 수정하고, "버그 수정 → 회귀 검증" 절차를 **Skill로 자산화**해 재사용한다.
+> **실습 목표**: 출퇴근 상태 처리 버그를 수정하고, 범용 회귀 검증 **Skill을 실행한 뒤 이 프로젝트에 맞게 개선**한다.
 
 ---
 
 ## 0. 이 실습에서 배우는 것
 
 - 실제 버그를 **재현 → 원인 분석 → 수정 → 회귀 검증**하는 흐름
-- 반복되는 검증 절차를 **Skill**(이름 붙인 재사용 절차)로 만들기
+- 반복되는 검증 절차를 **Skill**(이름 붙인 재사용 절차)로 쓰고, 프로젝트에 맞게 고치기
 - "수정했는데 다른 게 깨지지 않았는지"를 확인하는 습관
 
-> 💡 **왜 Skill인가**: "이 기능 고치고 나면 꼭 이 순서로 확인해" 같은 절차는 매번 똑같습니다. 한 번 Skill로 만들어 두면 다음 버그 때 "회귀 검증 Skill 돌려줘" 한마디로 재사용됩니다.
+> 💡 **왜 Skill인가**: "이 기능 고치고 나면 꼭 이 순서로 확인해" 같은 절차는 매번 똑같습니다. 한 번 Skill로 만들어 두면 다음 수정 때 `/api-regression` 한 줄로 재사용됩니다.
 
 ---
 
@@ -133,86 +133,82 @@ public UpdateResponse checkOut(Integer id, LocalTime checkOut) {
 
 ---
 
-## 4. 회귀 검증 + Skill로 자산화
+## 4. 회귀 검증 — 샘플 Skill 쓰고 개선하기
 
-수정 후, 깨진 게 없는지 **같은 절차로** 확인합니다. **백엔드를 재시작**(`Ctrl+C` 후 `./mvnw spring-boot:run`)한 뒤 진행하세요. 수정 사항은 재시작해야 반영됩니다.
+버그를 고친 뒤 확인하는 절차는 매번 비슷합니다. 이런 **반복되는 절차**를 Skill로 저장해 두고 씁니다. 저장소에 범용 샘플 Skill이 있습니다. 먼저 써 보고, 이 프로젝트에 맞게 고칩니다.
 
-아래는 3가지 경우를 한 번에 검증합니다. 직원 2·3번, 날짜 `2026-12-02`를 사용합니다 (앞 재현에서 쓰지 않은 값).
+### 4-1. 샘플 열어 보기 (AI 사용 없음)
 
-```bash
-BASE=http://localhost:8080/v1/attendances
+`.kiro/skills/api-regression/SKILL.md`를 엽니다. 특정 버그가 아니라 **백엔드를 고친 뒤 언제나** 쓰는 회귀 검증 절차입니다.
 
-# [A] 조퇴 → EARLY_LEAVE 로 저장되는가 (버그 수정 확인)
-A=$(curl -s -X POST $BASE/check-in -H 'Content-Type: application/json' \
-  -d '{"employeeId":2,"workDate":"2026-12-02","checkIn":"08:50:00"}' | jq -r '.id')
-curl -s -X PATCH "$BASE/$A/check-out?checkOut=17:00:00" > /dev/null
-
-# [B] 지각 후 정상 퇴근 → LATE 가 유지되는가 (회귀 확인: 기존 status를 덮어쓰지 않아야 함)
-B=$(curl -s -X POST $BASE/check-in -H 'Content-Type: application/json' \
-  -d '{"employeeId":3,"workDate":"2026-12-02","checkIn":"09:30:00"}' | jq -r '.id')
-curl -s -X PATCH "$BASE/$B/check-out?checkOut=18:30:00" > /dev/null
-
-# 결과 확인
-curl -s $BASE/date/2026-12-02 | jq '.[] | {employeeId, status, checkIn, checkOut}'
-
-# [C] 인접 기능 — 직원 목록이 그대로 15명인가
-curl -s http://localhost:8080/v1/employees | jq 'length'
-```
-
-**수정이 올바를 때의 기대 출력:**
-
-```jsonc
-{ "employeeId": 2, "status": "EARLY_LEAVE", "checkIn": "08:50:00", "checkOut": "17:00:00" }  // [A] 수정됨
-{ "employeeId": 3, "status": "LATE",        "checkIn": "09:30:00", "checkOut": "18:30:00" }  // [B] 유지됨
-15                                                                                            // [C] 회귀 없음
-```
-
-| 결과 | 의미 |
+| 부분 | 내용 |
 |------|------|
-| [A]가 `NORMAL` | 수정이 반영 안 됨 → 백엔드 재시작 여부, 매퍼 `SET status` 확인 |
-| [B]가 `NORMAL`/`null` | 정상 퇴근이 기존 status를 덮어씀 → 서비스에서 `attendance.getStatus()`를 전달했는지 확인 |
-| [C]가 15가 아님 | 인접 기능 회귀 → 변경 범위를 되짚기 |
+| 맨 위 `---` 사이 (frontmatter) | `name`(슬래시 명령 이름)과 `description`(언제 쓰는지). Kiro는 평소에 이 두 줄만 읽고, 요청이 `description`과 맞을 때 본문을 불러옵니다. |
+| 절차 | 1. 컴파일 → 2. 변경 범위(`git diff`) → 3. 고친 기능 → 4. 인접 기능 스모크(직원 15·부서 5·휴가 10) |
+| 보고 형식 | 단계별 통과/실패와 근거를 표로 |
 
-### 이 절차를 Skill로 저장
+> 💡 Skill은 JSON이 아니라 **폴더 + `SKILL.md`** 형식입니다. 위치는 `.kiro/skills/<이름>/SKILL.md`이고, 폴더 이름과 `name`을 같게 둡니다.
 
-위 [A][B][C] 절차를 Skill로 만들어 두면, 다음에 출퇴근 관련 수정 때 "회귀 검증 Skill 실행해줘" 한마디로 재사용됩니다. Kiro 채팅에 입력:
+> 💡 **좋은 Skill은 범용입니다**: "조퇴 버그 검증"처럼 버그 하나에 묶으면 그 버그를 고친 뒤엔 다시 쓸 일이 없습니다. 이 샘플은 어떤 백엔드 수정에도 쓸 수 있게 만들고, 무엇을 고쳤는지는 **실행할 때 알려 주는** 구조입니다.
+
+### 4-2. 실행해 보기 (AI 1회)
+
+3절에서 수정한 뒤 **백엔드를 재시작**(`Ctrl+C` 후 `./mvnw spring-boot:run`)하고, 기본 에이전트 채팅에 입력합니다.
 
 ```text
-방금 한 출퇴근 회귀 검증 절차([A] 조퇴, [B] 지각 후 정상 퇴근, [C] 직원 목록)를
-Skill로 만들어줘. 이름은 attendance-regression.
-- 언제 쓰는지(출퇴근 로직 수정 후), 절차, 기대 결과를 포함해줘.
-- 날짜는 실행할 때마다 겹치지 않게 바꾸도록 안내해줘 (UNIQUE 제약 때문).
+/api-regression 출퇴근 퇴근 처리를 고쳤어. 18시 전에 퇴근하면 status가 EARLY_LEAVE로 저장돼야 해. 테스트 날짜는 2026-12-02를 써줘.
 ```
 
-Skill 파일은 보통 `.kiro/skills/attendance-regression/SKILL.md`에 만들어지며, 대략 이런 모양입니다.
+Kiro가 명령 실행이나 데이터 생성(출근 등록) 승인을 물으면 허용합니다. **기대 결과**: 4단계 보고 표가 나오고 모두 통과입니다.
+
+| 단계 | 기대 |
+|------|------|
+| 1. 컴파일 | 통과 |
+| 2. 변경 범위 | `AttendanceService.java`, `AttendanceRepository.java`, `AttendanceMapper.xml` 3개 |
+| 3. 고친 기능 | 17:00 퇴근 → `EARLY_LEAVE` |
+| 4. 인접 기능 | 직원 15, 부서 5, 휴가 10 |
+
+> 💡 슬래시 명령 대신 "회귀 검증해줘"라고 해도, 요청이 `description`과 맞으면 Kiro가 이 Skill을 불러옵니다.
+
+### 4-3. 프로젝트에 맞게 개선하기 (AI 1회)
+
+범용 샘플이라 **이 프로젝트의 출퇴근 기능만의 규칙**은 모릅니다. 이번 수정에서 놓치기 쉬운 두 가지를 Skill에 넣습니다.
+
+- **같은 날짜로 다시 출근하면 실패합니다.** `attendance` 테이블은 `(employee_id, work_date)`가 UNIQUE입니다. 날짜를 정하지 않으면 두 번째 실행부터 출근 등록이 실패합니다.
+- **고치다 지각이 덮어써질 수 있습니다.** 3-3에서 정상 퇴근이면 기존 상태(`attendance.getStatus()`)를 그대로 저장하도록 했습니다. 이걸 잘못 고치면 지각(`LATE`)이 `NORMAL`로 바뀌는데, 샘플의 "고친 기능" 확인(조퇴)으로는 잡히지 않습니다.
+
+`SKILL.md`의 `## 실패 시` **바로 위**에 아래 절을 추가합니다.
 
 ```markdown
----
-name: attendance-regression
-description: 출퇴근(AttendanceService/Mapper) 수정 후 조퇴·지각·인접 기능 회귀를 검증한다. 출퇴근 로직을 고친 직후에 사용.
----
-
-# 출퇴근 회귀 검증
-
-## 전제
-- 로컬 백엔드 기동 (`./mvnw spring-boot:run`), 수정 반영을 위해 재시작 완료
-- (employee_id, work_date) UNIQUE → 실행마다 새 날짜 사용
-
-## 절차
-1. 직원 A 출근(08:50) → 17:00 퇴근 → 기대 status = EARLY_LEAVE
-2. 직원 B 출근(09:30) → 18:30 퇴근 → 기대 status = LATE (유지)
-3. GET /v1/employees 건수 = 15 (인접 기능 무회귀)
-
-## 실패 시
-- A 실패: updateCheckOut SET 절에 status 포함 여부 확인
-- B 실패: 서비스가 기존 status를 전달하는지 확인
+### 5. 프로젝트 규칙 — 출퇴근을 고쳤을 때
+- `attendance`는 `(employee_id, work_date)`가 UNIQUE다. 출근을 등록하기 전에 **아직 쓰지 않은 날짜**를 사용자에게 확인한다.
+- 조퇴 확인과 함께 **지각 후 정상 퇴근**도 확인한다. 출근 09:30 → 퇴근 18:30이면 `status`가 `LATE`로 남아야 한다.
+- 결과는 `GET /v1/attendances/date/<날짜>`로 확인한다.
 ```
 
-> 💡 **실행 방법**: 저장한 Skill은 채팅에서 `/attendance-regression`처럼 **슬래시 명령**으로 바로 실행할 수 있습니다. 요청 내용이 `description`과 맞으면 Kiro가 자동으로 불러오기도 합니다.
+보고 형식 표에도 한 줄을 추가합니다.
 
-> ⚠️ Skill 파일 위치·형식은 Kiro 버전에 따라 다를 수 있으니, Kiro가 생성한 결과를 우선하세요. 위 예시는 "무엇을 담아야 하는지" 기준입니다.
+```markdown
+| 5. 프로젝트 규칙 | 통과 / 실패 / 해당 없음 | 실제 값 |
+```
 
-> 💡 **실무 팁 — 회귀 테스트는 "수정한 것 + 인접한 것" 둘 다**: 버그가 고쳐졌는지(조퇴 반영)만 보지 말고, **건드린 코드 주변**(출퇴근 조회, 목록)이 멀쩡한지도 확인해야 진짜 회귀 검증입니다.
+저장한 뒤 **새 대화**에서 다시 실행합니다. 이번에는 날짜를 알려 주지 않습니다.
+
+```text
+/api-regression 출퇴근 퇴근 처리를 고쳤어. 18시 전에 퇴근하면 status가 EARLY_LEAVE로 저장돼야 해.
+```
+
+**기대 결과**:
+- Kiro가 출근 등록 전에 **날짜를 먼저 묻습니다**. 아직 쓰지 않은 날짜(예: `2026-12-03`)를 알려 줍니다.
+- 보고 표에 **5. 프로젝트 규칙** 행이 생기고, 조퇴 `EARLY_LEAVE`와 지각 후 정상 퇴근 `LATE`가 모두 확인됩니다.
+
+> 💡 범용 절차(1~4)는 그대로 두고, 프로젝트 고유의 규칙만 덧붙였습니다. 다른 프로젝트에 가져갈 때는 5절만 그 프로젝트의 규칙으로 바꾸면 됩니다.
+
+**되돌리기** (샘플로 돌아가려면)
+
+```bash
+git checkout -- .kiro/skills/api-regression/SKILL.md
+```
 
 ---
 
@@ -223,7 +219,8 @@ description: 출퇴근(AttendanceService/Mapper) 수정 후 조퇴·지각·인�
 - [ ] 쿼리/인터페이스/서비스 3곳을 수정했다
 - [ ] 조퇴 시 status가 EARLY_LEAVE로 저장된다
 - [ ] 인접 기능에 회귀가 없다
-- [ ] 회귀 검증 절차를 Skill로 저장했다
+- [ ] 샘플 Skill을 `/api-regression`으로 실행해 4단계가 모두 통과했다
+- [ ] 프로젝트 규칙(5절)을 추가했고, Kiro가 날짜를 먼저 묻고 지각 `LATE` 유지까지 확인했다
 
 ---
 
@@ -234,6 +231,9 @@ description: 출퇴근(AttendanceService/Mapper) 수정 후 조퇴·지각·인�
 | `Parameter 'status' not found` | 인터페이스에 `@Param("status")` 누락 | 3개 파라미터 모두 `@Param` 부여 |
 | status가 여전히 안 바뀜 | XML SET 목록에 `status` 안 넣음 | `SET check_out=..., status=...` 확인 |
 | 정상 퇴근인데 status가 null | else 분기에서 status 미전달 | 기존 status 유지하도록 전달 |
+| `/api-regression`이 목록에 없음 | 폴더 이름과 `name` 불일치, frontmatter(`---`) 누락 | `.kiro/skills/api-regression/SKILL.md` 경로와 첫 줄 `---` 확인 |
+| 스모크 건수가 15·5·10이 아님 | 실습 중 데이터를 추가함 | 건수가 아니라 "수정 전과 같은지"로 판단 |
+| 두 번째 실행에서 출근 등록 실패 | 같은 날짜 재사용 (UNIQUE 제약) | 날짜를 바꿔 실행 |
 
 ---
 
