@@ -35,3 +35,6 @@ target/
 
 ### Confluence 변환 결과 (scripts/md2confluence.py 로 docs/실습 에서 재생성) ###
 /docs/confluence/
+
+### /pr-workflow 가 생성하는 PR 본문 ###
+/.kiro/reports/pr-description.md
