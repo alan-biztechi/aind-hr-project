@@ -4,7 +4,7 @@
 > **소요 시간**: 약 30분
 > **AI 요청 횟수**: 약 4회
 > **난이도**: ★★★☆☆
-> **실습 목표**: 코드 컨벤션을 Steering으로 정하고, **훅이 변경 직후 자동으로 컨벤션을 점검**하게 한다. 이어서 `/pr-workflow` 한 줄로 품질 체크부터 PR 본문 작성까지 진행한다.
+> **실습 목표**: 프론트엔드 코드 컨벤션을 Steering으로 정하고, **훅이 변경 직후 자동으로 컨벤션을 점검**하게 한다. 이어서 `/pr-workflow` 한 줄로 format → lint → build부터 PR 본문 작성까지 진행한다.
 
 ---
 
@@ -14,7 +14,7 @@
 - 지시문만 적으면 되는 **Ask Kiro(`agent`) 훅**
 - 필요할 때 실행하는 워크플로를 **슬래시 명령(`/pr-workflow`)**으로 만드는 법
 
-> 💡 **왜 Hook인가**: "코드 고친 뒤 컨벤션 확인", "PR 올리기 전 빌드·본문 작성"처럼 좋은 절차도 사람이 매번 기억해야 하면 결국 빠집니다. Hook은 이런 일을 **이벤트에 묶어 자동으로** 돌립니다.
+> 💡 **왜 Hook인가**: "화면 코드 고친 뒤 컨벤션 확인", "PR 올리기 전 빌드·본문 작성"처럼 좋은 절차도 사람이 매번 기억해야 하면 결국 빠집니다. Hook은 이런 일을 **이벤트에 묶어 자동으로** 돌립니다.
 
 ---
 
@@ -24,9 +24,9 @@
 
 | 파일 | 역할 |
 |------|------|
-| `.kiro/steering/code-conventions.md` | 백엔드 컨벤션 (처음엔 C1~C10). `src/main/` 파일을 다룰 때 자동으로 대화에 포함됩니다 (`inclusion: fileMatch`). |
-| `.kiro/hooks/convention-review.json` | **훅**. 에이전트가 응답을 마칠 때, 이번 턴에 고친 `src/main/` 파일을 `code-conventions.md`의 규칙으로 점검합니다. |
-| `.kiro/steering/pr-workflow.md` | **`/pr-workflow`** 슬래시 명령. 코드 품질 체크 → PR 템플릿 작성 → 최종 확인을 차례로 진행합니다 (`inclusion: manual`). |
+| `.kiro/steering/frontend-conventions.md` | 프론트 컨벤션 (처음엔 F1~F7). `frontend/src/` 파일을 다룰 때 자동으로 대화에 포함됩니다 (`inclusion: fileMatch`). |
+| `.kiro/hooks/convention-review.json` | **훅**. 에이전트가 응답을 마칠 때, 이번 턴에 고친 `frontend/src/` 파일을 `frontend-conventions.md`의 규칙으로 점검합니다. |
+| `.kiro/steering/pr-workflow.md` | **`/pr-workflow`** 슬래시 명령. `frontend/`에서 format → lint:fix → lint → build, 컨벤션 점검 → PR 템플릿 작성 → 최종 확인을 차례로 진행합니다 (`inclusion: manual`). |
 | `.github/pull_request_template.md` | PR 본문 형식 |
 
 ### 훅 파일 구조
@@ -38,11 +38,11 @@
   "version": "v1",
   "hooks": [
     {
-      "name": "Convention review after changes",
+      "name": "Frontend convention review after changes",
       "trigger": "Stop",
       "action": {
         "type": "agent",
-        "prompt": "이번 턴에 src/main/ 아래 파일(Java, Mapper XML)을 수정했다면, ... 점검하고 ... 보고만 해. ... 수정하지 않았다면 아무 말도 하지 말고 끝내."
+        "prompt": "이번 턴에 frontend/src/ 아래 파일(.ts, .tsx)을 수정했다면, ... frontend-conventions.md 의 모든 규칙 기준으로 점검하고 ... 보고만 해. ... 수정하지 않았다면 아무 말도 하지 말고 끝내."
       }
     }
   ]
@@ -79,64 +79,66 @@
 
 ```text
 실습용이야. 컨벤션 위반인 걸 알고 있으니 그대로 해줘.
-src/main/java/com/aind/hr/service/EmployeeService.java 의 getEmployeeList() 첫 줄에
-System.out.println("직원 목록 조회"); 를 추가해줘.
+frontend/src/pages/EmployeesPage.tsx 의 EmployeesPage() 함수 첫 줄에
+console.log("직원 페이지 렌더링"); 을 추가해줘.
 ```
 
 **기대 결과**
-1. Kiro가 코드를 추가합니다. `code-conventions.md`가 대화에 포함돼 있어서, 추가하기 전에 "C2 위반"이라고 먼저 경고할 수도 있습니다. 그것도 Steering이 동작한 것입니다.
+1. Kiro가 코드를 추가합니다. `frontend-conventions.md`가 대화에 포함돼 있어서, 추가하기 전에 "F6 위반"이라고 먼저 경고할 수도 있습니다. 그것도 Steering이 동작한 것입니다.
 2. 응답이 끝나면 **훅이 실행되어** 점검 표가 이어서 나옵니다.
 
    | 규칙 번호 | 파일:라인 | 설명 |
    |-----------|-----------|------|
-   | C2 | `EmployeeService.java:23` 근처 | 콘솔 출력 금지 |
+   | F6 | `EmployeesPage.tsx:22` 근처 | `console.*` 금지 |
 
 3. 표가 나온 뒤에는 훅이 다시 돌아도 "이번 턴에 수정하지 않았다면 아무 말도 하지 말고 끝내" 지시 때문에 조용히 끝납니다.
+
+> 💡 **lint와 무엇이 다른가**: 이 프로젝트의 ESLint 설정은 `console.log`를 막지 않아서 `npm run lint`로는 통과합니다. 훅은 도구가 모르는 **프로젝트 규칙**(F1~F7)을 Steering 기준으로 점검합니다.
 
 이번에는 코드를 고치지 않는 질문을 해 봅니다.
 
 ```text
-EmployeeService는 무슨 역할을 하는 클래스야?
+EmployeesPage는 무슨 역할을 하는 화면이야?
 ```
 
-**기대 결과**: 답변 뒤에 점검 표가 **나오지 않습니다**. 이번 턴에 `src/main/` 파일을 고치지 않았기 때문입니다.
+**기대 결과**: 답변 뒤에 점검 표가 **나오지 않습니다**. 이번 턴에 `frontend/src/` 파일을 고치지 않았기 때문입니다.
 
 **되돌리기**
 
 ```bash
-git checkout -- src/main/java/com/aind/hr/service/EmployeeService.java
+git checkout -- frontend/src/pages/EmployeesPage.tsx
 ```
 
 ---
 
 ## 3. 프로젝트에 맞게 개선 — 컨벤션 하나 추가하기 (AI 1회)
 
-이 프로젝트의 Repository 메서드는 모두 `select`, `insert`, `update`, `delete`로 시작합니다(`selectAllWithDepartment`, `updateCheckOut` 등). 이 규칙을 컨벤션에 추가합니다.
+이 프로젝트의 컴포넌트 props 타입은 모두 `interface <컴포넌트명>Props` 형태입니다(`ModalProps`, `DataTableProps` 등). 이 규칙을 컨벤션에 추가합니다.
 
-`.kiro/steering/code-conventions.md`의 C10 행 **바로 아래**에 한 줄을 추가합니다.
+`.kiro/steering/frontend-conventions.md`의 F7 행 **바로 아래**에 한 줄을 추가합니다.
 
 ```markdown
-| C11 | Repository 메서드 이름은 `select`, `insert`, `update`, `delete` 중 하나로 시작한다 |
+| F8 | 컴포넌트 props 타입은 `interface <컴포넌트명>Props`로 선언한다 (예: `ModalProps`) |
 ```
 
-훅과 `/pr-workflow`는 고칠 필요가 없습니다. 둘 다 "`code-conventions.md`의 **모든 규칙**"을 기준으로 점검하도록 적혀 있어서, Steering에 추가한 규칙을 그대로 따릅니다.
+훅과 `/pr-workflow`는 고칠 필요가 없습니다. 둘 다 "`frontend-conventions.md`의 **모든 규칙**"을 기준으로 점검하도록 적혀 있어서, Steering에 추가한 규칙을 그대로 따릅니다.
 
 **새 대화**를 열고 입력합니다.
 
 ```text
 실습용이야. 컨벤션 위반인 걸 알고 있으니 그대로 해줘.
-src/main/java/com/aind/hr/repository/EmployeeRepository.java 에
-Employee findByEmail(@Param("email") String email); 메서드 선언만 추가해줘. XML은 추가하지 마.
+frontend/src/components/common/Divider.tsx 를 새로 만들어줘.
+props 타입은 type Props = { label: string } 로 하고, label을 <hr> 아래에 보여주는 컴포넌트야.
 ```
 
-**기대 결과**: 훅 점검 표에 **C11 위반**(`findByEmail`)이 나오면 성공입니다.
+**기대 결과**: 훅 점검 표에 **F8 위반**(`type Props`)이 나오면 성공입니다.
 
 > 💡 규칙 한 줄을 추가했더니 훅의 점검 기준이 바로 바뀌었습니다. 훅은 지시문만 들고 있고, **기준은 Steering 한 곳**에 있어서 규칙을 고칠 곳이 하나뿐입니다.
 
-**되돌리기** (코드만 되돌리고, 추가한 C11은 남겨도 됩니다)
+**되돌리기** (새로 만든 파일만 지우고, 추가한 F8은 남겨도 됩니다)
 
 ```bash
-git checkout -- src/main/java/com/aind/hr/repository/EmployeeRepository.java
+rm frontend/src/components/common/Divider.tsx
 ```
 
 ---
@@ -153,7 +155,7 @@ git checkout -- src/main/java/com/aind/hr/repository/EmployeeRepository.java
 
 | 단계 | 하는 일 |
 |------|---------|
-| Step 1 코드 품질 체크 | `frontend/`에서 `npm run format` → `npm run lint:fix` → `npm run lint` → `npm run build`. 백엔드 변경이 있으면 `./mvnw -q compile`과 컨벤션 점검도 함께 |
+| Step 1 코드 품질 체크 | `frontend/`에서 `npm run format` → `npm run lint:fix` → `npm run lint` → `npm run build` → 바뀐 `frontend/src` 파일을 컨벤션으로 점검 |
 | Step 2 PR 템플릿 작성 | `git diff main...HEAD`로 변경 분석 → `.github/pull_request_template.md` 형식으로 본문 작성 |
 | Step 3 최종 확인 | 작성된 PR 본문을 마크다운으로 보여 주고, 추가로 확인할 사항 안내 |
 
@@ -168,11 +170,11 @@ git checkout -- src/main/java/com/aind/hr/repository/EmployeeRepository.java
 ## 5. 완료 체크리스트
 
 - [ ] 훅 파일에서 `trigger`와 `action`의 뜻을 설명할 수 있다
-- [ ] 위반 코드를 추가시켰더니 훅이 C2 위반을 보고했다
+- [ ] 위반 코드를 추가시켰더니 훅이 F6 위반을 보고했다
 - [ ] 코드를 고치지 않은 질문에서는 훅이 아무것도 보고하지 않았다
-- [ ] C11을 추가했고, 훅이 C11 위반을 보고했다
+- [ ] F8을 추가했고, 훅이 F8 위반을 보고했다
 - [ ] `/pr-workflow`로 PR 본문을 받았다
-- [ ] `git checkout`으로 실습 중 바꾼 코드를 되돌렸다
+- [ ] 실습 중 바꾸거나 만든 코드를 되돌렸다
 
 ---
 
@@ -182,19 +184,20 @@ git checkout -- src/main/java/com/aind/hr/repository/EmployeeRepository.java
 |------|------|------|
 | 훅이 실행되지 않음 | 훅을 추가하거나 고친 뒤 같은 세션을 계속 씀 | 새 대화(세션)를 열고 다시 시도 |
 | 훅 파일을 고친 뒤 Agent Hooks에서 사라짐 | `prompt`의 따옴표를 지워 JSON이 깨짐 | `git checkout -- .kiro/hooks/convention-review.json` 후 다시 수정 |
-| C11이 점검되지 않음 | 규칙을 추가한 뒤 같은 대화를 계속 씀 | 새 대화에서 다시 요청 |
+| F8이 점검되지 않음 | 규칙을 추가한 뒤 같은 대화를 계속 씀 | 새 대화에서 다시 요청 |
 | 점검 표가 계속 반복됨 | 훅 지시문의 "수정하지 않았다면 아무 말도 하지 말고 끝내"가 빠짐 | 지시문 끝 문장을 되살리기 |
 | Kiro가 위반 코드를 거부함 | Steering이 컨벤션 위반을 막음 | 요청에 "실습용이야. 위반인 걸 알고 있으니 그대로 해줘"를 넣기 |
 | `/pr-workflow`가 목록에 없음 | 파일 이름이나 front-matter(`inclusion: manual`)가 다름 | `.kiro/steering/pr-workflow.md`와 첫 3줄 확인 |
-| 컴파일·빌드 단계 실패 | Java·Node 미설치 또는 백엔드 오류 | 실습 ⓪의 환경 확인. 실패도 결과로 보고되는 것이 정상 |
+| `npm run format`/`lint`가 없다고 나옴 | `frontend/`에서 `npm install`을 하지 않음 | `cd frontend && npm install` |
+| 빌드 단계 실패 | Node 미설치 또는 타입 오류 | 실습 ⓪의 환경 확인. 실패도 결과로 보고되는 것이 정상 |
 
 ---
 
 ## 7. 돌아보기
 
 - **Steering(기준) + Hook(자동 실행) + 슬래시 명령(필요할 때 실행)** 을 조합하면, 규칙은 한 곳에 두고 점검은 자동으로 돌릴 수 있습니다.
-- 훅이 AI로 점검하면 결과가 매번 조금씩 다를 수 있습니다. 실무에서 **반드시 지켜야 하는** 규칙은 Checkstyle 같은 린터를 빌드에 넣고, 훅의 `command` 액션으로 그 린터를 실행하는 방식이 더 확실합니다.
-- 다른 프로젝트에서는 `code-conventions.md`의 규칙과 `pr-workflow.md`의 빌드 명령·기준 브랜치만 바꾸면 그대로 쓸 수 있습니다.
+- 훅이 AI로 점검하면 결과가 매번 조금씩 다를 수 있습니다. **반드시 지켜야 하는** 규칙은 ESLint 규칙으로 옮기세요(예: `no-console`). 그러면 `npm run lint`가 매번 같은 결과로 잡습니다.
+- 다른 프로젝트에서는 `frontend-conventions.md`의 규칙과 `pr-workflow.md`의 빌드 명령·기준 브랜치만 바꾸면 그대로 쓸 수 있습니다.
 - 다음(⑥)에서는 이 모든 것을 **내 프로젝트에 이식**하는 방법을 정리합니다.
 
 ---
