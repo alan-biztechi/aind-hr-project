@@ -64,9 +64,21 @@
 
 ### 2-3. Hook 자동화 (실습 ⑤)
 
-- `frontend-conventions.md`의 규칙과 `scripts/hooks/pre-commit-check.sh`의 `rule` 목록·빌드 명령을 내 프로젝트 것으로 바꾼다. 훅 파일(`pre-commit-check.json`)은 그대로 쓸 수 있습니다.
-- `pr-workflow.md`의 빌드 명령과 기준 브랜치를 내 프로젝트에 맞게 바꾼다.
-- 린터로 표현할 수 있는 규칙은 린터 설정으로 옮기고, 스크립트에는 린터가 못 잡는 프로젝트 규칙만 남긴다.
+- `lint-on-save.json`의 `matcher`(대상 경로)와 `command`(lint 명령)만 내 프로젝트 것으로 바꾼다. 예: 백엔드면 `src/.*\.java$` + 포맷터 명령.
+- 훅 환경에서 빌드 도구(npm, mvn 등)가 보이는지 먼저 확인한다 ([실습 ⑤ 2절](./05-hooks.md)).
+- (선택) `pr-workflow.md`를 만들었다면 빌드 명령과 기준 브랜치(`main`)를 내 프로젝트에 맞게 바꾼다.
+- 프로젝트 규칙 중 린터로 표현할 수 있는 것은 린터 설정으로 옮긴다. 그러면 lint-on-save 훅이 그 규칙까지 자동으로 잡는다.
+
+**많이 쓰는 다른 훅 사례** (필요할 때 하나씩 추가)
+
+| 사례 | 트리거 / matcher | 액션 |
+|------|------------------|------|
+| 민감 파일 수정 막기 | `PreToolUse` / `write` | agent: "대상이 `application*.yml`, `.env`이면 수정하지 말고 먼저 물어봐" |
+| Spec 작업 완료 후 검증 | `PostTaskExec` | agent: "`frontend`에서 `npm run typecheck`를 실행하고 결과를 보고해" |
+| 시크릿 스캔 | `Stop` | agent: 변경 파일의 키·토큰·비밀번호 점검 (매 턴 실행이라 무거움) |
+| 세션 시작 맥락 | `SessionStart` | command: `git status --short` (stdout이 맥락에 추가됨) |
+
+> 💡 훅은 이벤트마다 실행되므로 **빈도**를 먼저 생각하세요. `Stop`·`PreToolUse`처럼 자주 발생하는 트리거에 `agent` 액션을 걸면 매번 AI가 호출됩니다.
 
 > ⚠️ **보안 규칙은 먼저 이식하라**: 비밀정보 하드코딩 금지, 공유 DB 직접 변경 금지, 파괴적 명령 승인 같은 규칙은 다른 어떤 규칙보다 먼저 깔아두는 것이 안전합니다.
 
@@ -82,6 +94,8 @@
 | 리뷰 파이프라인 | `.kiro/agents/*.json` | 오케스트레이션 구조 | 리뷰어 프롬프트의 "기술 전제" |
 | 검증 스크립트 | `.kiro/docs/validate_agents.py` | 그대로 | (불필요) |
 | 검증 가이드 | `.kiro/docs/TESTING.md` | 형식 | 정답지(Expected Findings) 전부 |
+| lint 자동 실행 훅 | `.kiro/hooks/lint-on-save.json` ([실습 ⑤](./05-hooks.md)에서 생성) | 구조 | `matcher`(대상 경로), `command`(lint 명령) |
+| PR 준비 슬래시 명령 (선택) | `.kiro/steering/pr-workflow.md` ([실습 ⑤ 4절](./05-hooks.md)에서 생성) | 단계 구성 | 빌드 명령, 기준 브랜치 |
 
 ---
 

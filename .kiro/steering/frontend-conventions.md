@@ -7,7 +7,6 @@ fileMatchPattern: 'frontend/src/**'
 
 `frontend/src/` 아래 React + TypeScript 코드를 작성·수정할 때 따르는 규칙입니다. 아래 규칙은 현재 코드 전체가 예외 없이 지키고 있습니다.
 코드를 점검할 때는 이 표의 규칙 번호(F1, F2, …)로 위반을 보고합니다.
-커밋 직전 훅(`scripts/hooks/pre-commit-check.sh`)이 같은 번호로 기계적으로 검사합니다. 규칙을 추가하면 스크립트의 `rule` 목록에도 한 줄을 추가합니다.
 포맷과 기본 문법 오류는 `npm run format`, `npm run lint`가 맡고, 이 문서는 도구가 잡지 못하는 **프로젝트 구조 규칙**을 다룹니다.
 
 | # | 규칙 |
