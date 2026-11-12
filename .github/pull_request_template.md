@@ -8,7 +8,7 @@
 ## 검증
 | 단계 | 결과 |
 |------|------|
-| 코드 컨벤션 (`bash scripts/check-conventions.sh`) | |
+| 코드 컨벤션 (`.kiro/steering/code-conventions.md` C1~C10) | |
 | 백엔드 컴파일 (`./mvnw -q compile`) | |
 | 프론트 빌드 (`cd frontend && npm run build`) | |
 | 기능 확인 (curl / 화면) | |

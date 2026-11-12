@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Convention review after changes",
+      "trigger": "Stop",
+      "description": "에이전트가 응답을 마칠 때, 이번 턴에 수정한 백엔드 파일을 코드 컨벤션 기준으로 점검하게 한다.",
+      "action": {
+        "type": "agent",
+        "prompt": "이번 턴에 src/main/ 아래 파일(Java, Mapper XML)을 수정했다면, 수정한 파일만 .kiro/steering/code-conventions.md 의 C1~C10 기준으로 점검하고 위반을 \"규칙 번호 | 파일:라인 | 설명\" 표로 알려줘. 코드는 고치지 말고 보고만 해. 이번 턴에 src/main/ 파일을 수정하지 않았다면 아무 말도 하지 말고 끝내."
+      }
+    }
+  ]
+}
