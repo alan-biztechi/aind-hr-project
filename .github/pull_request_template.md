@@ -8,9 +8,10 @@
 ## 검증
 | 단계 | 결과 |
 |------|------|
-| 코드 컨벤션 (`.kiro/steering/code-conventions.md`) | |
-| 백엔드 컴파일 (`./mvnw -q compile`) | |
-| 프론트 빌드 (`cd frontend && npm run build`) | |
+| 포맷 (`npm run format`) | |
+| 린트 (`npm run lint:fix` → `npm run lint`) | |
+| 프론트 빌드 (`npm run build`) | |
+| 백엔드 컴파일·컨벤션 (백엔드 변경 시) | |
 | 기능 확인 (curl / 화면) | |
 
 <!-- 실행하지 못한 단계는 "실행 못 함 — 이유"로 적는다 -->

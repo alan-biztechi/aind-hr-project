@@ -46,6 +46,8 @@ Backend:
 - Run a single test: `./mvnw test -Dtest=ClassName#methodName`
 
 Frontend (run inside `frontend/`):
+- Format: `npm run format` (check only: `npm run format:check`)
+- Lint: `npm run lint` (auto-fix: `npm run lint:fix`)
 - Type-check: `npm run typecheck`
 - Build (type-check + bundle): `npm run build`
 - Dev server (do not run in automation; the user runs this manually): `npm run dev`

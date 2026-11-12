@@ -153,7 +153,7 @@ git checkout -- src/main/java/com/aind/hr/repository/EmployeeRepository.java
 
 | 단계 | 하는 일 |
 |------|---------|
-| Step 1 코드 품질 체크 | 포맷(이 프로젝트엔 포매터가 없어 "해당 없음") → `main` 대비 바뀐 `src/main` 파일을 컨벤션으로 점검 → `./mvnw -q compile` → `cd frontend && npm run build` |
+| Step 1 코드 품질 체크 | `frontend/`에서 `npm run format` → `npm run lint:fix` → `npm run lint` → `npm run build`. 백엔드 변경이 있으면 `./mvnw -q compile`과 컨벤션 점검도 함께 |
 | Step 2 PR 템플릿 작성 | `git diff main...HEAD`로 변경 분석 → `.github/pull_request_template.md` 형식으로 본문 작성 |
 | Step 3 최종 확인 | 작성된 PR 본문을 마크다운으로 보여 주고, 추가로 확인할 사항 안내 |
 
