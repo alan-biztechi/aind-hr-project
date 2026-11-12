@@ -27,6 +27,7 @@ TanStack Query(React Query)로 통일하여 Requirement 7(공통 로딩/에러/�
 | HTTP | axios | `^1.20.0` | 인터셉터로 베이스 URL·에러 정규화 (Req 7.1, 7.4) |
 | 폼 | react-hook-form | `^7.90.0` | 선언적 검증 (Req 2.5, 3.5, 5.5) |
 | 타입 | @types/react / @types/react-dom | `^19.x` (latest) | React 19 타입 |
+| 타입 | @types/node | `^24.19.2` | `vite.config.ts`의 `node:url`, `process` 타입. 없으면 `tsc --noEmit`이 실패함 (Req 8.2) |
 | 스타일 | CSS Modules (+ 소량의 전역 CSS) | — | 의존성 최소화, 컴포넌트 단위 스타일 |
 
 > **TypeScript 버전 주의**: npm `latest`는 네이티브 컴파일러로 포팅된 TypeScript 7 라인을 가리킨다.

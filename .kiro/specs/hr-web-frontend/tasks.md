@@ -3,6 +3,7 @@
 - [x] 1. 프로젝트 초기화 및 기반 설정
   - `frontend/`에 Vite + React + TypeScript 프로젝트 생성 (package.json, tsconfig, index.html, src/main.tsx)
   - 의존성 추가: react-router-dom, @tanstack/react-query, axios, react-hook-form
+  - devDependency 추가: `@types/node` (`vite.config.ts`가 `node:url`, `process`를 사용하므로 타입 체크에 필요)
   - `vite.config.ts`에 `/v1` → `http://localhost:8080` dev 프록시 설정
   - `.env.example`에 `VITE_API_BASE_URL` 추가
   - _Requirements: 7.1, 7.5, 8.1, 8.3, 8.5_
@@ -72,7 +73,8 @@
   - 로딩 표시, 카드 클릭 시 해당 라우트 이동
   - _Requirements: 6.1, 6.2, 6.3_
 
-- [~] 13. 빌드 검증 및 문서화
+- [x] 13. 빌드 검증 및 문서화
   - `frontend/README.md`에 실행 방법(백엔드 먼저 기동 → `npm install` → `npm run dev`)과 환경변수 설명 추가 — 완료
-  - `tsc --noEmit` 및 `vite build`로 타입/빌드 확인 — **보류: 현재 환경에 Node/npm 미설치. Node 20.19+ 환경에서 `npm install && npm run build`로 검증 필요**
+  - `tsc --noEmit` 및 `vite build`로 타입/빌드 확인 — 완료 (Node v24.22.2에서 `npm install && npm run build` 통과). 최초 실행 시 `vite.config.ts`의 `node:url`/`process` 타입 에러가 발생하여 `@types/node` devDependency를 추가해 해결
+  - 미확인: 백엔드를 띄운 상태의 화면 동작(`npm run dev`)은 이 검증에 포함되지 않음
   - _Requirements: 8.1, 8.2_
